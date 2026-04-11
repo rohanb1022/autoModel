@@ -1,0 +1,1 @@
+SUCCESS: Gemini 2.5 is working.
