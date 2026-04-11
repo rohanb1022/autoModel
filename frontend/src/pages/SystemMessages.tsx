@@ -68,28 +68,28 @@ export default function SystemMessages() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase">System Messages</h1>
-            <p className="text-gray-400 mt-2">Logs and Auto-Heal events from the Machine Learning Pipeline.</p>
+            <h1 className="text-3xl font-black tracking-tighter text-[#00000b]">System Messages</h1>
+            <p className="text-slate-500 mt-2 font-medium">Logs and Auto-Heal events from the Machine Learning Pipeline.</p>
           </div>
           {isSubscribed && (
-            <div className="px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">Pro Member</span>
+            <div className="px-4 py-2 rounded-full bg-[#4b41e1]/5 border border-[#4b41e1]/20 flex items-center gap-2 shadow-sm">
+              <Sparkles className="w-4 h-4 text-[#4b41e1]" />
+              <span className="text-xs font-bold text-[#4b41e1] uppercase tracking-[0.1em]">Pro Member</span>
             </div>
           )}
         </div>
 
         {hasInconsistencies && (
-          <div className="p-6 rounded-2xl border border-indigo-500 bg-indigo-950/20 shadow-[0_0_20px_rgba(79,70,229,0.15)] flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="p-6 rounded-2xl border border-[#4b41e1]/20 bg-indigo-50 shadow-[0_20px_40px_rgba(75,65,225,0.05)] flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="bg-indigo-500/20 p-3 rounded-full">
-                {isSubscribed ? <Sparkles className="w-8 h-8 text-indigo-400" /> : <Crown className="w-8 h-8 text-indigo-400" />}
+              <div className="bg-white p-3 rounded-full shadow-sm border border-indigo-100">
+                {isSubscribed ? <Sparkles className="w-8 h-8 text-[#4b41e1]" /> : <Crown className="w-8 h-8 text-indigo-400" />}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white uppercase tracking-tight">
+                <h3 className="text-xl font-black text-[#00000b] tracking-tight">
                   {isSubscribed ? "AI Helper Active" : "Data Inconsistencies Detected"}
                 </h3>
-                <p className="text-gray-300 mt-1">
+                <p className="text-slate-600 mt-1 font-medium">
                   {isSubscribed 
                     ? "Your Pro subscription is active. Click 'Get Help from Model' on any error to get expert fixes."
                     : "Your data has some inconsistencies. Please purchase our subscription to continue utilizing AI Auto-Healing."}
@@ -108,45 +108,45 @@ export default function SystemMessages() {
         )}
 
         {loading ? (
-          <div className="animate-pulse text-indigo-500">Loading messages...</div>
+          <div className="animate-pulse text-[#4b41e1] font-bold">Loading messages...</div>
         ) : messages.length === 0 ? (
-          <div className="p-8 text-center rounded-xl border border-white/10 bg-[#0a0a0a]">
-            <p className="text-gray-500">No system messages yet.</p>
+          <div className="p-8 text-center rounded-xl border border-slate-100 bg-white shadow-sm">
+            <p className="text-slate-500 font-medium">No system messages yet.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {messages.map((msg) => (
-              <div key={msg._id} className="p-5 rounded-2xl border border-white/10 bg-[#121212] space-y-3 relative overflow-hidden group">
+              <div key={msg._id} className="p-5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-[0_10px_30px_rgba(0,0,0,0.04)] transition-shadow space-y-3 relative overflow-hidden group">
                 {msg.type === 'error' && isSubscribed && (
                   <div className="absolute top-0 right-0 p-4 transition-opacity opacity-0 group-hover:opacity-100">
                     <button 
                       onClick={() => handleGetAIAdvice(msg._id)}
                       disabled={adviceLoading === msg._id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#00000b] hover:bg-slate-900 text-white text-xs font-bold transition-all shadow-lg shadow-black/10 disabled:opacity-50"
                     >
                       {adviceLoading === msg._id ? "Analyzing..." : (
-                        <><Sparkles className="w-3 h-3" /> Get Help from Model</>
+                        <><Sparkles className="w-3 h-3 text-[#e2dfff]" /> Get Help from Model</>
                       )}
                     </button>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
                   {getIcon(msg.type)}
-                  <h3 className="font-bold text-white text-lg">{msg.title}</h3>
-                  <span className="ml-auto text-xs text-gray-500">
+                  <h3 className="font-bold text-[#00000b] text-lg">{msg.title}</h3>
+                  <span className="ml-auto text-xs font-bold text-slate-400 uppercase tracking-widest">
                     {new Date(msg.createdAt).toLocaleString()}
                   </span>
                 </div>
 
-                <p className="text-gray-300 text-sm ml-8">{msg.content}</p>
+                <p className="text-slate-600 text-sm ml-8 font-medium">{msg.content}</p>
                 <div className="ml-8 flex items-center gap-3">
-                  <span className="text-xs px-2 py-1 bg-white/5 rounded text-indigo-400 font-mono">
+                  <span className="text-xs px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-slate-600 font-bold font-mono shadow-sm">
                     {msg.datasetName}
                   </span>
                   {msg.aiAdvice && (
                     <button 
                       onClick={() => { setSelectedAdvice(msg.aiAdvice); setIsModalOpen(true); }}
-                      className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-bold underline underline-offset-4"
+                      className="text-xs text-[#4b41e1] hover:text-indigo-700 flex items-center gap-1 font-bold underline underline-offset-4"
                     >
                       <Sparkles className="w-3 h-3" /> View AI Advice
                     </button>
@@ -154,25 +154,25 @@ export default function SystemMessages() {
                 </div>
 
                 {msg.traceback && (
-                  <div className="ml-8 mt-3 p-3 rounded-xl bg-red-950/20 border border-red-500/20">
-                    <p className="text-xs text-red-400 font-mono overflow-auto max-h-32">
+                  <div className="ml-8 mt-3 p-3 rounded-xl bg-red-50 border border-red-100">
+                    <p className="text-xs text-red-600 font-bold font-mono overflow-auto max-h-32">
                       {msg.traceback}
                     </p>
                   </div>
                 )}
 
                 {msg.llmCode && (
-                  <div className="ml-8 mt-3 p-3 rounded-xl bg-indigo-950/20 border border-indigo-500/20">
+                  <div className="ml-8 mt-3 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
                     <div className="flex items-center justify-between mb-2">
                        <div className="flex items-center gap-2">
-                          <Code className="w-4 h-4 text-indigo-400" />
-                          <span className="text-xs font-bold text-indigo-400 uppercase tracking-tight">Auto-Heal Patch</span>
+                          <Code className="w-4 h-4 text-[#4b41e1]" />
+                          <span className="text-xs font-bold text-[#4b41e1] uppercase tracking-[0.1em]">Auto-Heal Patch</span>
                        </div>
-                       <button onClick={() => copyToClipboard(msg.llmCode)} className="p-1 hover:bg-white/5 rounded relative group/copy">
-                          <Copy className="w-3 h-3 text-indigo-400" />
+                       <button onClick={() => copyToClipboard(msg.llmCode)} className="p-1 hover:bg-white rounded border border-transparent hover:border-slate-200 relative group/copy transition-all shadow-sm">
+                          <Copy className="w-3 h-3 text-slate-500 group-hover/copy:text-[#4b41e1]" />
                        </button>
                     </div>
-                    <pre className="text-xs text-indigo-300 font-mono overflow-auto max-h-48">
+                    <pre className="text-xs text-[#4b41e1] font-bold font-mono overflow-auto max-h-48">
                       {msg.llmCode}
                     </pre>
                   </div>
@@ -183,24 +183,23 @@ export default function SystemMessages() {
         )}
       </div>
 
-      {/* Advice Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl max-h-[80vh] bg-[#121212] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl max-h-[80vh] bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.12)] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-indigo-400" />
-                <h2 className="text-xl font-bold text-white uppercase tracking-tighter italic">AI Expert Analysis</h2>
+                <Sparkles className="w-5 h-5 text-[#4b41e1]" />
+                <h2 className="text-xl font-bold text-[#00000b] tracking-tight">AI Expert Analysis</h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-400">
-                <X className="w-6 h-6" />
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-white rounded-full text-slate-400 hover:text-[#00000b] border border-transparent hover:border-slate-200 transition-all shadow-sm shadow-transparent hover:shadow-sm">
+                <X className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
-            <div className="p-8 overflow-auto flex-1 prose prose-invert prose-indigo max-w-none">
+            <div className="p-8 overflow-auto flex-1 prose prose-indigo max-w-none text-slate-700">
               <ReactMarkdown>{selectedAdvice || ""}</ReactMarkdown>
             </div>
-            <div className="p-6 border-t border-white/5 bg-white/5 flex justify-end">
-              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-500 transition-colors">
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl font-bold bg-[#00000b] text-white hover:-translate-y-0.5 active:scale-95 transition-all shadow-xl shadow-black/10">
                 Close
               </button>
             </div>

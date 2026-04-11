@@ -90,70 +90,70 @@ export default function Pricing() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter text-white uppercase mb-4">
-            Unleash <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500">Premium</span> Power
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-[#00000b] mb-4">
+            Unleash <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#4b41e1] to-[#8b5cf6]">Premium</span> Power
           </h1>
-          <p className="text-xl text-gray-400">
+          <p className="text-xl text-slate-500 font-medium">
             Fix data inconsistencies instantly with our auto-healing AI.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Free Tier */}
-          <div className="p-8 rounded-3xl border border-white/5 bg-[#121212] relative flex flex-col">
-            <h3 className="text-2xl font-bold text-white mb-2">Basic</h3>
-            <p className="text-gray-400 mb-6">For exploring simple datasets.</p>
-            <div className="text-4xl font-black text-white mb-8">
-              $0<span className="text-lg text-gray-500 font-normal">/mo</span>
+          <div className="p-8 rounded-[2.5rem] border border-slate-100 bg-white relative flex flex-col shadow-sm">
+            <h3 className="text-2xl font-black text-[#00000b] mb-2 tracking-tight">Basic</h3>
+            <p className="text-slate-500 mb-6 font-medium">For exploring simple datasets.</p>
+            <div className="text-5xl font-black text-[#00000b] mb-8 tracking-tighter">
+              $0<span className="text-xl text-slate-400 font-bold">/mo</span>
             </div>
 
             <ul className="space-y-4 mb-8 flex-1">
-              <li className="flex items-center text-gray-300">
-                <Check className="w-5 h-5 text-gray-500 mr-3" /> Basic Model Training
+              <li className="flex items-center text-slate-600 font-bold">
+                <Check className="w-5 h-5 text-slate-400 mr-3" /> Basic Model Training
               </li>
-              <li className="flex items-center text-gray-300">
-                <Check className="w-5 h-5 text-gray-500 mr-3" /> Standard Visualizations
+              <li className="flex items-center text-slate-600 font-bold">
+                <Check className="w-5 h-5 text-slate-400 mr-3" /> Standard Visualizations
               </li>
-              <li className="flex items-center text-gray-500 line-through">
-                <Check className="w-5 h-5 text-gray-700 mr-3" /> Auto-Heal Data Errors
+              <li className="flex items-center text-slate-400 font-medium line-through">
+                <Check className="w-5 h-5 text-slate-300 mr-3" /> Auto-Heal Data Errors
               </li>
             </ul>
 
-            <button disabled className="w-full py-4 px-6 rounded-xl font-bold bg-white/5 text-gray-500 cursor-not-allowed">
+            <button disabled className="w-full py-4 px-6 rounded-xl font-bold bg-slate-50 border border-slate-200 text-slate-400 shadow-sm cursor-not-allowed">
               Current Plan
             </button>
           </div>
 
           {/* Pro Tier */}
-          <div className="p-8 rounded-3xl border border-indigo-500/30 bg-indigo-950/10 relative flex flex-col ring-1 ring-indigo-500 shadow-[0_0_40px_rgba(79,70,229,0.15)]">
+          <div className="p-8 rounded-[2.5rem] border border-[#4b41e1]/20 bg-slate-50 relative flex flex-col ring-1 ring-[#4b41e1]/10 shadow-[0_20px_50px_rgba(75,65,225,0.06)] hover:shadow-[0_20px_60px_rgba(75,65,225,0.1)] transition-all">
             <div className="absolute top-0 right-8 transform -translate-y-1/2">
-              <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1 uppercase tracking-wider rounded-full flex items-center gap-1 ">
-                <Sparkles className="w-3 h-3" /> Popular
+              <span className="bg-[#4b41e1] text-white text-[10px] font-black px-4 py-1.5 uppercase tracking-widest rounded-full flex items-center gap-1 shadow-lg shadow-[#4b41e1]/30">
+                <Sparkles className="w-3 h-3 text-[#e2dfff]" /> Popular
               </span>
             </div>
 
-            <h3 className="text-2xl font-bold text-white mb-2 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Pro</h3>
-            <p className="text-gray-400 mb-6">For professional workflows & heavy datasets.</p>
-            <div className="text-4xl font-black text-white mb-8">
-              ₹499<span className="text-lg text-gray-500 font-normal">/mo</span>
+            <h3 className="text-2xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-[#4b41e1] to-[#8b5cf6] tracking-tight">Pro</h3>
+            <p className="text-slate-500 mb-6 font-medium">For professional workflows & heavy datasets.</p>
+            <div className="text-5xl font-black text-[#00000b] mb-8 tracking-tighter">
+              ₹499<span className="text-xl text-slate-400 font-bold">/mo</span>
             </div>
 
             <ul className="space-y-4 mb-8 flex-1">
-              <li className="flex items-center text-gray-200">
-                <Check className="w-5 h-5 text-indigo-400 mr-3" /> Advanced Model Generation
+              <li className="flex items-center text-slate-700 font-bold">
+                <Check className="w-5 h-5 text-[#4b41e1] mr-3" /> Advanced Model Generation
               </li>
-              <li className="flex items-center text-gray-200">
-                <Check className="w-5 h-5 text-indigo-400 mr-3" /> Unlimited Dataset Size
+              <li className="flex items-center text-slate-700 font-bold">
+                <Check className="w-5 h-5 text-[#4b41e1] mr-3" /> Unlimited Dataset Size
               </li>
-              <li className="flex items-center text-white font-bold">
-                <Zap className="w-5 h-5 text-yellow-400 mr-3 fill-yellow-400" /> AI Auto-Heal & Imputations
+              <li className="flex items-center text-[#4b41e1] font-black tracking-tight">
+                <Zap className="w-5 h-5 text-[#4b41e1] mr-3 fill-[#4b41e1]/20" /> AI Auto-Heal & Imputations
               </li>
             </ul>
 
             <button
               onClick={handlePayment}
               disabled={loading}
-              className="w-full py-4 px-6 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 px-6 rounded-xl font-bold bg-[#00000b] hover:bg-slate-900 text-white transition-all shadow-xl shadow-black/10 transform hover:-translate-y-1 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Processing..." : "Upgrade to Pro"}
             </button>

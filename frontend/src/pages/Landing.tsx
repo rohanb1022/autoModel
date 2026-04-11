@@ -1,364 +1,293 @@
-// import { Link } from "react-router-dom";
-// import { motion } from "framer-motion";
-// import {
-//   Sparkles,
-//   ArrowRight,
-//   Zap,
-//   Brain,
-//   BarChart3,
-//   MessageSquare,
-//   Upload,
-//   Shield,
-//   Github,
-//   Linkedin,
-//   Mail,
-// } from "lucide-react";
-// import { Button } from "@/components/ui/button";
-// import HowItWorks from "@/components/steps";
-// import Testimonials from "@/components/testimonials";
-// import Footer from "@/components/Footer";
-// import CTA from "@/components/CTA";
+import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import LocomotiveScroll from 'locomotive-scroll';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Zap,
+  Shield,
+  Target,
+  ArrowRight,
+  Sparkles,
+  Layers,
+  BrainCircuit,
+  BarChart3,
+  Fingerprint,
+  Cpu
+} from 'lucide-react';
 
 
-// const fadeUp = {
-//   hidden: { opacity: 0, y: 24 },
-//   visible: (i: number) => ({
-//     opacity: 1,
-//     y: 0,
-//     transition: { delay: i * 0.1, duration: 0.5, ease: [0, 0, 0.2, 1] as const },
-//   }),
-// };
+const Landing = () => {
+  useEffect(() => {
+    const locomotiveScroll = new LocomotiveScroll();
+    return () => locomotiveScroll.destroy();
+  }, []);
 
-// const features = [
-//   { icon: Zap, title: "Auto ML Training", desc: "Upload data and let AI train, compare, and select the best model automatically." },
-//   { icon: Brain, title: "AI-Powered Insights", desc: "Get intelligent summaries, key findings, and actionable recommendations." },
-//   { icon: Shield, title: "Data Cleaning", desc: "Automated preprocessing: handle missing values, outliers, and encoding." },
-//   { icon: BarChart3, title: "Interactive Dashboard", desc: "Visualize distributions, correlations, and model performance in real-time." },
-//   { icon: MessageSquare, title: "Chat with Data", desc: "Ask questions about your dataset in natural language and get instant answers." },
-//   { icon: Upload, title: "One-Click Upload", desc: "Drag & drop your CSV and start building models in seconds." },
-// ];
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+  };
 
-// const steps = [
-//   { num: "01", title: "Upload Dataset", desc: "Drag and drop your CSV file — we handle the rest." },
-//   { num: "02", title: "AI Trains Models", desc: "AutoModel cleans data, engineers features, and trains multiple models." },
-//   { num: "03", title: "Get Insights", desc: "View accuracy scores, charts, AI insights, and chat with your data." },
-// ];
-
-// const testimonials = [
-//   { name: "Sarah Chen", role: "ML Engineer at Stripe", text: "AutoModel Builder cut our prototyping time by 80%. The automated feature engineering is genuinely impressive." },
-//   { name: "Marcus Johnson", role: "Startup Founder", text: "I'm not a data scientist, but AutoModel let me build predictive models for our product in minutes. Game changer." },
-//   { name: "Priya Sharma", role: "Data Analyst", text: "The chat-with-data feature is incredible. I ask questions in plain English and get instant, accurate answers." },
-// ];
-
-// export default function Landing() {
-//   return (
-//     <div className="min-h-screen bg-background text-foreground">
-
-//       {/* Nav */}
-//       <nav className="fixed top-0 inset-x-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
-//         <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-//           <div className="flex items-center gap-2">
-//             <Sparkles className="h-5 w-5 text-primary" />
-//             <span className="font-bold text-lg tracking-tight">AutoModel Builder</span>
-//           </div>
-//           <div className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
-//             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-//             <a href="#how" className="hover:text-foreground transition-colors">How It Works</a>
-//             <a href="#Testimonials" className="hover:text-foreground transition-colors">Testimonials</a>
-//           </div>
-//           <div className="flex items-center gap-3">
-//             <Link to="/login">
-//               <Button variant="ghost" size="sm">Log in</Button>
-//             </Link>
-//             <Link to="/signup">
-//               <Button size="sm">Get Started</Button>
-//             </Link>
-//           </div>
-//         </div>
-//       </nav>
-
-
-//       {/* Hero section */}
-//       <section className="h-screen flex items-center justify-center">
-//         <div className="max-w-6xl mx-auto">
-//           <div className="text-center mb-16">
-//             <h2 className="text-6xl md:text-6xl font-bold tracking-tight mb-4">
-//               Everything you need to build ML models
-//             </h2>
-//             <p className="text-muted-foreground max-w-xl mx-auto text-2xl">
-//               From data upload to production-ready insights — AutoModel handles the entire pipeline.
-//             </p>
-//           </div>
-//         </div>
-//       </section>
-
-//       {/* Spacer for fixed nav */}
-//       <div className="pt-20" />
-
-//       {/* Features */}
-//       <section id="features" className="py-24 px-6 ">
-//         <div className="max-w-6xl mx-auto">
-//           {/* <div className="text-center mb-16">
-//             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-//               Everything you need to build ML models
-//             </h2>
-//             <p className="text-muted-foreground max-w-xl mx-auto">
-//               From data upload to production-ready insights — AutoModel handles the entire pipeline.
-//             </p>
-//           </div> */}
-//           <div className="text-center mb-16">
-//             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-//               Features
-//             </h2>
-//             <p className="text-muted-foreground max-w-xl mx-auto">
-//               From data upload to production-ready insights — AutoModel handles the entire pipeline.
-//             </p>
-//           </div>
-//           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-//             {features.map((f, i) => (
-//               <motion.div
-//                 key={f.title}
-//                 initial="hidden"
-//                 whileInView="visible"
-//                 viewport={{ once: true }}
-//                 variants={fadeUp}
-//                 custom={i}
-//                 className="glass rounded-xl p-6 hover:border-primary/30 transition-colors group"
-//               >
-//                 <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-//                   <f.icon className="h-5 w-5 text-primary" />
-//                 </div>
-//                 <h3 className="font-semibold text-lg mb-2">{f.title}</h3>
-//                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-//               </motion.div>
-//             ))}
-//           </div>
-//         </div>
-//       </section>
-
-
-//       <HowItWorks />
-
-//       <Testimonials />
-
-//       <CTA />
-
-//       {/* Footer */}
-//       <Footer />
-//     </div>
-//   );
-// }
-
-
-"use client";
-
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
-import { useRef } from "react";
-import { Link } from "react-router-dom";
-import { Sparkles, ArrowRight, Github, Linkedin, Mail, Twitter, Zap, Brain, Shield, BarChart3, MessageSquare, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import HowItWorks from "@/components/steps";
-import Testimonials from "@/components/testimonials";
-import Footer from "@/components/Footer";
-import CTA from "@/components/CTA";
-import Navbar from "@/components/NavLink";
-
-// High-end animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.3 },
-  },
-};
-
-const itemVariants = {
-  hidden: { y: 40, opacity: 0, filter: "blur(10px)" },
-  visible: { y: 0, opacity: 1, filter: "blur(0px)", transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } },
-};
-
-export default function Landing() {
-  const containerRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  // Springy scale for the background reveal
-  const scale = useSpring(useTransform(scrollYProgress, [0, 0.2], [1, 0.95]), {
-    stiffness: 100,
-    damping: 30,
-  });
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+    },
+  };
 
   return (
-    <div ref={containerRef} className="relative min-h-screen bg-[#050505] text-white selection:bg-white selection:text-black overflow-hidden">
+    <div className="bg-white text-[#1a1c1c] selection:bg-[#645efb]/30 overflow-x-hidden font-['Inter']">
+      <style>{`
+        @keyframes breathe {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-15px); }
+        }
+        @keyframes breathe-alt {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(10px, -12px); }
+        }
+        @keyframes drift {
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          33% { transform: translate(10px, -5px) rotate(1deg); }
+          66% { transform: translate(-5px, 10px) rotate(-1deg); }
+        }
+        @keyframes hero-mesh-float {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
+          50% { transform: scale(1.1) rotate(5deg); opacity: 0.7; }
+        }
+        .hero-mesh { animation: hero-mesh-float 12s ease-in-out infinite; filter: blur(50px); }
+        .floating-preview { animation: breathe 5s ease-in-out infinite; }
+        .floating-slow { animation: breathe 8s ease-in-out infinite; }
+        .floating-medium { animation: breathe 5.5s ease-in-out infinite; }
+        .floating-fast { animation: breathe 4s ease-in-out infinite; }
+        .floating-alt { animation: breathe-alt 6s ease-in-out infinite; }
+        .floating-drift { animation: drift 10s ease-in-out infinite; }
+        .reveal-item { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        .reveal-item.is-visible { opacity: 1; transform: translateY(0); }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05); }
+        .node-dot { width: 8px; height: 8px; border-radius: 999px; background: #4b41e1; box-shadow: 0 0 15px rgba(75, 65, 225, 0.5); }
+      `}</style>
 
-      {/* --- MOUSE SPOTLIGHT (Optional: Requires a simple hook or CSS) --- */}
-      <div className="pointer-events-none fixed inset-0 z-30 transition duration-300 lg:bg-[radial-gradient(600px_at_50%_50%,rgba(255,255,255,0.03),transparent)]" />
+      {/* TopNavBar */}
+      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-900/5">
+        <div className="flex justify-between items-center max-w-7xl mx-auto px-6 h-20">
+          <div className="text-xl font-bold tracking-tighter text-slate-900">
+            Aether Intelligence
+          </div>
+          <div className="hidden md:flex items-center space-x-10">
+            <a className="text-[#4b41e1] font-bold border-b-2 border-[#4b41e1] transition-all duration-300 ease-out hover:-translate-y-0.5" href="#platform">Platform</a>
+            <a className="text-slate-600 hover:text-slate-900 transition-all duration-300 ease-out hover:-translate-y-0.5" href="#process">Process</a>
+            <a className="text-slate-600 hover:text-slate-900 transition-all duration-300 ease-out hover:-translate-y-0.5" href="#case-studies">Case Studies</a>
+            <a className="text-slate-600 hover:text-slate-900 transition-all duration-300 ease-out hover:-translate-y-0.5" href="#solutions">Solutions</a>
+          </div>
+          <Link to={localStorage.getItem("token") ? "/dashboard" : "/signup"}>
+            <button className="bg-[#00000b] text-white px-6 py-2.5 border border-[#00000b] rounded-full font-semibold hover:-translate-y-1 transition-all duration-300  shadow-black/10">
+              Get Started
+            </button>
+          </Link>
+        </div>
+      </nav>
 
-      {/* --- NAV --- */}
-      {/* <nav className="fixed top-0 w-full z-[100] border-b border-white/5 bg-black/50 backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-2 group cursor-pointer"
-          >
-            <div className="p-2 bg-white rounded-lg">
-              <Sparkles className="h-5 w-5 text-black" />
+      <main>
+        {/* Hero Section */}
+        <section className="relative pt-40 pb-24 px-6 overflow-hidden">
+          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] -z-10 pointer-events-none hero-mesh">
+            <svg className="w-full h-full" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="heroGrad" x1="0%" x2="100%" y1="0%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: '#4b41e1', stopOpacity: 0.4 }} />
+                  <stop offset="50%" style={{ stopColor: '#e2dfff', stopOpacity: 0.2 }} />
+                  <stop offset="100%" style={{ stopColor: '#1a1a2e', stopOpacity: 0.6 }} />
+                </linearGradient>
+              </defs>
+              <path fill="url(#heroGrad)" d="M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z">
+                <animate attributeName="d" dur="12s" repeatCount="indefinite" values="M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z; M850,550Q750,850,450,750Q150,650,250,350Q350,50,650,150Q950,250,850,550Z; M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z" />
+              </path>
+            </svg>
+          </div>
+
+          <div className="absolute top-[35%] left-[5%] floating-slow hidden xl:block">
+            <div className="glass-card p-3 rounded-lg flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-[#4b41e1]"></div>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Vector Syncing...</span>
             </div>
-            <span className="font-black text-xl tracking-tighter uppercase">AutoModel</span>
-          </motion.div>
-
-          <div className="hidden md:flex items-center gap-8 text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500">
-            {["features", "how", "testimonials"].map((item) => (
-              <a key={item} href={`#${item}`} className="hover:text-white transition-all duration-300">
-                {item}
-              </a>
-            ))}
           </div>
 
-          <div className="flex items-center gap-4">
-            <Link to="/login">
-              <Button variant="ghost" className="text-zinc-400 hover:text-white">Login</Button>
-            </Link>
-            <Link to="/signup">
-              <Button className="bg-white text-black hover:bg-zinc-200 rounded-full px-6 font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                Launch App
-              </Button>
-            </Link>
+          <div className="absolute top-40 left-[10%] floating-slow"><div className="node-dot"></div></div>
+          <div className="absolute top-60 right-[15%] floating-medium"><div className="node-dot opacity-40"></div></div>
+
+          {/* New Aesthetic Floating Elements */}
+          <div className="absolute top-[15%] right-[25%] floating-drift hidden lg:block opacity-80 z-10">
+            <div className="w-24 h-24 rounded-full border border-[#4b41e1]/20 bg-gradient-to-tr from-[#4b41e1]/5 to-transparent backdrop-blur-sm"></div>
           </div>
-        </div>
-      </nav> */}
-      <Navbar />
+          <div className="absolute bottom-[20%] left-[20%] floating-alt hidden md:block opacity-70">
+            <div className="w-48 h-48 rounded-full bg-[#4b41e1]/10 blur-3xl"></div>
+          </div>
+          <div className="absolute top-[45%] right-[8%] floating-fast opacity-90 z-20">
+            <div className="w-14 h-14 rounded-2xl rotate-12 border border-slate-100 bg-white/60 backdrop-blur-md shadow-2xl shadow-indigo-500/10 flex items-center justify-center text-[#4b41e1]">
+              <span className="material-symbols-outlined text-xl">model_training</span>
+            </div>
+          </div>
+          <div className="absolute bottom-[30%] right-[22%] floating-slow opacity-60">
+            <div className="w-3 h-3 rounded-full bg-[#e2dfff] shadow-[0_0_20px_#4b41e1]"></div>
+          </div>
 
-      {/* --- HERO SECTION --- */}
-      <motion.section
-        style={{ scale }}
-        className="relative h-screen flex flex-col items-center justify-center pt-20"
-      >
-        {/* Abstract Background Elements */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-full h-[500px] bg-gradient-to-b from-white/5 to-transparent blur-[120px] -z-10" />
-
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="text-center px-6 max-w-5xl"
-        >
-          <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-8">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-            </span>
-            Next-Gen AutoML Platform
-          </motion.div>
-
-          <motion.h1 variants={itemVariants} className="text-5xl md:text-8xl lg:text-[110px] font-black tracking-tight leading-[0.9] mb-6 md:mb-8">
-            PREDICTIVE AI <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white via-white to-white/20">
-              FOR EVERYONE.
-            </span>
-          </motion.h1>
-
-          <motion.p variants={itemVariants} className="text-zinc-500 text-base md:text-xl max-w-2xl mx-auto leading-relaxed mb-8 md:mb-10 px-4">
-            Turn messy datasets into production-ready machine learning models in minutes. No code, just performance.
-          </motion.p>
-
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            {localStorage.getItem("token") ? (
-              <Link to="/dashboard">
-                <Button size="lg" className="h-16 px-10 rounded-full bg-white text-black text-lg font-bold hover:scale-105 transition-transform">
-                  Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
+          <div className="max-w-5xl mx-auto text-center relative z-10">
+            <div className="inline-block px-4 py-1.5 mb-8 rounded-full bg-slate-100 text-[#4b41e1] text-xs font-bold tracking-widest uppercase">
+              Revolutionizing Knowledge Retrieval
+            </div>
+            <h1 className="text-5xl md:text-7xl font-extrabold text-[#00000b] mb-8 max-w-4xl mx-auto leading-[1.1] tracking-tight">
+              The Archive of Intelligence, <br />
+              <span className="text-[#4b41e1]">Rendered Weightless.</span>
+            </h1>
+            <p className="text-slate-500 text-xl max-w-2xl mx-auto mb-12">
+              Aether transforms unstructured data into a high-performance vector gallery, delivering insights with academic precision and fluid sophistication.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24">
+              <Link to={localStorage.getItem("token") ? "/dashboard" : "/signup"}>
+                <button className="bg-[#00000b] text-white px-8 py-4 rounded-full font-bold text-lg hover:-translate-y-1 transition-all duration-300 shadow-2xl shadow-black/20">
+                  Get Started
+                </button>
               </Link>
-            ) : (
-              <>
-                <Link to="/signup">
-                  <Button size="lg" className="h-16 px-10 rounded-full bg-white text-black text-lg font-bold hover:scale-105 transition-transform">
-                    Start Building <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Button size="lg" variant="outline" className="h-16 px-10 rounded-full border-white/10 hover:bg-white/5 text-lg">
-                  View Demo
-                </Button>
-              </>
-            )}
-          </motion.div>
-        </motion.div>
-      </motion.section>
+              <button className="border border-slate-200 text-[#00000b] px-8 py-4 rounded-lg font-bold text-lg hover:bg-slate-50 transition-all duration-300">
+                View Documentation
+              </button>
+            </div>
 
-      {/* --- FEATURES (BENTO GRID) --- */}
-      <section id="features" className="py-32 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-20">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter">CORE POWER.</h2>
-            <p className="text-zinc-500 mt-4 text-lg">The engine under the hood of AutoModel Builder.</p>
+            <div className="relative max-w-6xl mx-auto">
+              <div className="floating-preview">
+                <div className="bg-white rounded-2xl shadow-[0_40px_100px_rgba(75,65,225,0.12)] border border-slate-100 p-2 md:p-4 overflow-hidden group">
+                  <div className="relative w-full aspect-[16/10] md:aspect-[21/9] rounded-xl overflow-hidden bg-slate-100">
+                    <img
+                      src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1172&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                      alt="Dashboard Preview"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#00000b]/20 to-transparent"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-4">
-            {/* Feature 1 - Large Bento */}
-            <BentoCard
-              className="md:col-span-6 lg:col-span-8 bg-zinc-900/50"
-              icon={<Zap className="text-white" />}
-              title="Auto ML Training"
-              desc="Our engine evaluates 50+ algorithms simultaneously to pick the absolute best model for your specific data."
-            />
-            {/* Feature 2 - Small Bento */}
-            <BentoCard
-              className="md:col-span-6 lg:col-span-4 bg-white text-black"
-              icon={<Brain className="text-black" />}
-              title="AI Insights"
-              desc="Natural language explanations for complex model weights."
-              light
-            />
-            {/* Feature 3 - Small Bento */}
-            <BentoCard
-              className="md:col-span-3 lg:col-span-4 border border-white/10"
-              icon={<Shield className="text-white" />}
-              title="Data Guard"
-              desc="Automated outlier detection and PII scrubbing."
-            />
-            {/* Feature 4 - Small Bento */}
-            <BentoCard
-              className="md:col-span-3 lg:col-span-4 border border-white/10"
-              icon={<MessageSquare className="text-white" />}
-              title="Chat with Data"
-              desc="Query your CSV files using plain English."
-            />
-            {/* Feature 5 - Mid Bento */}
-            <BentoCard
-              className="md:col-span-6 lg:col-span-4 bg-zinc-900/50"
-              icon={<BarChart3 className="text-white" />}
-              title="Interactive UI"
-              desc="Real-time visualization of model convergence."
-            />
+        {/* Feature Grid */}
+        <section className="py-32 bg-slate-50 relative overflow-hidden" id="platform">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="mb-20 text-center md:text-left">
+              <h2 className="text-xs font-bold text-[#4b41e1] uppercase tracking-[0.3em] mb-4">Core Platform</h2>
+              <h3 className="text-4xl md:text-5xl lg:text-6xl font-black text-[#00000b] tracking-tight">Built for the High-End <br />Tech Ecosystem.</h3>
+            </div>
+
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-100px" }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            >
+              {[
+                {
+                  icon: <BrainCircuit className="w-6 h-6" />,
+                  title: "Dimensional Search",
+                  desc: "Navigate through terabytes of data using semantic mapping that understands context, not just keywords.",
+                  color: "bg-indigo-500/10 text-indigo-600"
+                },
+                {
+                  icon: <Fingerprint className="w-6 h-6" />,
+                  title: "Encrypted Latency",
+                  desc: "End-to-end zero-knowledge encryption ensures your proprietary models remain private and untraceable.",
+                  color: "bg-slate-900/10 text-slate-900"
+                },
+                {
+                  icon: <Cpu className="w-6 h-6" />,
+                  title: "Neural Synchrony",
+                  desc: "Real-time sync between your global database and LLM endpoints with sub-10ms response cycles.",
+                  color: "bg-orange-500/10 text-orange-600"
+                }
+              ].map((feature, i) => (
+                <motion.div
+                  key={i}
+                  variants={itemVariants}
+                  className="bg-white p-10 md:p-12 rounded-[2.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 hover:shadow-[0_20px_40px_rgba(75,65,225,0.08)] transition-all duration-500 group"
+                >
+                  <div className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform`}>
+                    {feature.icon}
+                  </div>
+                  <h4 className="font-black mb-4 text-2xl tracking-tighter text-[#00000b]">{feature.title}</h4>
+                  <p className="text-slate-500 leading-relaxed text-lg font-medium">{feature.desc}</p>
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
+        </section>
+
+        {/* Process Section */}
+        <section className="py-32 bg-white" id="process">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex flex-col lg:flex-row gap-20">
+              <div className="lg:w-1/3">
+                <h2 className="text-xs font-bold text-[#4b41e1] uppercase tracking-widest mb-6">Our Process</h2>
+                <h3 className="text-5xl font-extrabold text-[#00000b] mb-8 leading-tight">How We <br />Orchestrate.</h3>
+                <p className="text-slate-500 text-lg">We treat every integration as a curated exhibition of your data's potential.</p>
+              </div>
+              <motion.div
+                className="lg:w-2/3 space-y-16"
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+              >
+                {[
+                  { id: '01', title: 'Ingestion & Distillation', desc: 'Raw datasets are purified and structured through our proprietary neural filters.' },
+                  { id: '02', title: 'Vector Synthesis', desc: 'Information is mapped into a multi-dimensional archive where relationships are defined.' },
+                  { id: '03', title: 'Infinite Deployment', desc: 'Deploy your weightless archive to any endpoint, from mobile to enterprise clusters.' }
+                ].map((step, idx) => (
+                  <motion.div key={idx} className="flex gap-8 group" variants={itemVariants}>
+                    <span className="text-7xl md:text-8xl font-black text-slate-100 group-hover:text-[#4b41e1] transition-colors duration-500 tracking-tighter shrink-0">{step.id}</span>
+                    <div className="pt-6 border-t border-slate-100 w-full">
+                      <h4 className="text-2xl font-black mb-3 tracking-tight text-[#00000b]">{step.title}</h4>
+                      <p className="text-slate-500 text-lg font-medium max-w-xl leading-relaxed">{step.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* Newsletter / CTA */}
+        <section className="py-32 px-6">
+          <div className="max-w-7xl mx-auto bg-[#00000b] text-white rounded-3xl p-12 md:p-24 relative overflow-hidden text-center">
+            <div className="relative z-10">
+              <h2 className="text-4xl md:text-6xl font-extrabold mb-8">Ready to lighten your <br />data's load?</h2>
+              <p className="text-indigo-200 text-lg max-w-xl mx-auto mb-12">Join 200+ enterprise teams currently building on the Aether Intelligence framework.</p>
+              <div className="max-w-md mx-auto">
+                <form className="flex flex-col sm:flex-row gap-4" onSubmit={(e) => e.preventDefault()}>
+                  <input className="flex-1 bg-white/10 border-b border-white/20 text-white placeholder:text-white/40 focus:outline-none focus:border-[#4b41e1] px-4 py-4 rounded-lg" placeholder="Enter your work email" type="email" />
+                  <button className="bg-[#4b41e1] text-white px-8 py-4 rounded-lg font-bold hover:bg-[#4b41e1]/90 transition-all">Join the Archive</button>
+                </form>
+              </div>
+            </div>
+            <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#4b41e1]/10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="bg-white w-full border-t border-slate-100 py-20 px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="text-lg font-bold text-slate-900 mb-4">Aether Intelligence</div>
+          <p className="text-slate-400 text-xs tracking-widest uppercase font-semibold">© 2026 Aether Intelligence. Built for the Weightless Archive.</p>
         </div>
-      </section>
-
-      <HowItWorks />
-      <Testimonials />
-      <CTA />
-      <Footer />
+      </footer>
     </div>
   );
-}
+};
 
-// Custom Bento Card Component
-function BentoCard({ icon, title, desc, className, light = false }: any) {
-  return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      className={`relative overflow-hidden rounded-[2rem] p-8 flex flex-col justify-between min-h-[300px] transition-colors ${className}`}
-    >
-      <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ${light ? 'bg-black/5' : 'bg-white/5 border border-white/10'}`}>
-        {icon}
-      </div>
-      <div>
-        <h3 className={`text-2xl font-black tracking-tight mb-2 ${light ? 'text-black' : 'text-white'}`}>{title}</h3>
-        <p className={`text-sm leading-relaxed ${light ? 'text-black/60' : 'text-zinc-500'}`}>{desc}</p>
-      </div>
-    </motion.div>
-  );
-}
+export default Landing;
