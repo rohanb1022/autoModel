@@ -14,6 +14,7 @@ import {
   Fingerprint,
   Cpu
 } from 'lucide-react';
+import Hero3DModel from '../components/Hero3DModel';
 
 
 const Landing = () => {
@@ -75,7 +76,12 @@ const Landing = () => {
       `}</style>
 
       {/* TopNavBar */}
-      <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-900/5">
+      <motion.nav
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl shadow-2xl shadow-slate-900/5"
+      >
         <div className="flex justify-between items-center max-w-7xl mx-auto px-6 h-20">
           <div className="text-xl font-bold tracking-tighter text-slate-900">
             Aether Intelligence
@@ -92,25 +98,12 @@ const Landing = () => {
             </button>
           </Link>
         </div>
-      </nav>
+      </motion.nav>
 
       <main>
         {/* Hero Section */}
-        <section className="relative pt-40 pb-24 px-6 overflow-hidden">
-          <div className="absolute top-[25%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] -z-10 pointer-events-none hero-mesh">
-            <svg className="w-full h-full" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="heroGrad" x1="0%" x2="100%" y1="0%" y2="100%">
-                  <stop offset="0%" style={{ stopColor: '#4b41e1', stopOpacity: 0.4 }} />
-                  <stop offset="50%" style={{ stopColor: '#e2dfff', stopOpacity: 0.2 }} />
-                  <stop offset="100%" style={{ stopColor: '#1a1a2e', stopOpacity: 0.6 }} />
-                </linearGradient>
-              </defs>
-              <path fill="url(#heroGrad)" d="M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z">
-                <animate attributeName="d" dur="12s" repeatCount="indefinite" values="M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z; M850,550Q750,850,450,750Q150,650,250,350Q350,50,650,150Q950,250,850,550Z; M780,500Q780,780,500,780Q220,780,220,500Q220,220,500,220Q780,220,780,500Z" />
-              </path>
-            </svg>
-          </div>
+        <section className="relative pt-40 pb-24 px-6 overflow-hidden" style={{ minHeight: '100vh' }}>
+          <Hero3DModel />
 
           <div className="absolute top-[35%] left-[5%] floating-slow hidden xl:block">
             <div className="glass-card p-3 rounded-lg flex items-center gap-3">
@@ -130,7 +123,7 @@ const Landing = () => {
             <div className="w-48 h-48 rounded-full bg-[#4b41e1]/10 blur-3xl"></div>
           </div>
           <div className="absolute top-[45%] right-[8%] floating-fast opacity-90 z-20">
-            <div className="w-14 h-14 rounded-2xl rotate-12 border border-slate-100 bg-white/60 backdrop-blur-md shadow-2xl shadow-indigo-500/10 flex items-center justify-center text-[#4b41e1]">
+            <div className="w-44 h-14 rounded-2xl rotate-12 border border-slate-100 bg-white/60 backdrop-blur-md shadow-2xl shadow-indigo-500/10 flex items-center justify-center text-[#4b41e1]">
               <span className="material-symbols-outlined text-xl">model_training</span>
             </div>
           </div>
@@ -138,29 +131,34 @@ const Landing = () => {
             <div className="w-3 h-3 rounded-full bg-[#e2dfff] shadow-[0_0_20px_#4b41e1]"></div>
           </div>
 
-          <div className="max-w-5xl mx-auto text-center relative z-10">
-            <div className="inline-block px-4 py-1.5 mb-8 rounded-full bg-slate-100 text-[#4b41e1] text-xs font-bold tracking-widest uppercase">
+          <motion.div
+            className="max-w-5xl mx-auto text-center relative z-10"
+            initial="hidden"
+            animate="visible"
+            variants={containerVariants}
+          >
+            <motion.div variants={itemVariants} className="inline-block px-4 py-1.5 mb-8 rounded-full bg-slate-100 text-[#4b41e1] text-xs font-bold tracking-widest uppercase shadow-sm">
               Revolutionizing Knowledge Retrieval
-            </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold text-[#00000b] mb-8 max-w-4xl mx-auto leading-[1.1] tracking-tight">
+            </motion.div>
+            <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-extrabold text-[#00000b] mb-8 max-w-4xl mx-auto leading-[1.1] tracking-tight">
               The Archive of Intelligence, <br />
-              <span className="text-[#4b41e1]">Rendered Weightless.</span>
-            </h1>
-            <p className="text-slate-500 text-xl max-w-2xl mx-auto mb-12">
+              <span className="text-[#4b41e1] bg-clip-text text-transparent bg-gradient-to-r from-[#4b41e1] to-[#7f77f1]">Rendered Weightless.</span>
+            </motion.h1>
+            <motion.p variants={itemVariants} className="text-slate-600 text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
               Aether transforms unstructured data into a high-performance vector gallery, delivering insights with academic precision and fluid sophistication.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24">
+            </motion.p>
+            <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24">
               <Link to={localStorage.getItem("token") ? "/dashboard" : "/signup"}>
-                <button className="bg-[#00000b] text-white px-8 py-4 rounded-full font-bold text-lg hover:-translate-y-1 transition-all duration-300 shadow-2xl shadow-black/20">
+                <button className="bg-[#00000b] text-white px-8 py-4 rounded-full font-bold text-lg hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#4b41e1]/20 transition-all duration-300 shadow-xl shadow-black/10">
                   Get Started
                 </button>
               </Link>
-              <button className="border border-slate-200 text-[#00000b] px-8 py-4 rounded-lg font-bold text-lg hover:bg-slate-50 transition-all duration-300">
+              <button className="border border-slate-200 text-[#00000b] px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-50 hover:-translate-y-1.5 transition-all duration-300">
                 View Documentation
               </button>
-            </div>
+            </motion.div>
 
-            <div className="relative max-w-6xl mx-auto">
+            <motion.div variants={itemVariants} className="relative max-w-6xl mx-auto">
               <div className="floating-preview">
                 <div className="bg-white rounded-2xl shadow-[0_40px_100px_rgba(75,65,225,0.12)] border border-slate-100 p-2 md:p-4 overflow-hidden group">
                   <div className="relative w-full aspect-[16/10] md:aspect-[21/9] rounded-xl overflow-hidden bg-slate-100">
@@ -173,8 +171,8 @@ const Landing = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
         {/* Feature Grid */}
