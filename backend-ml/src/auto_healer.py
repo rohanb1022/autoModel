@@ -52,14 +52,29 @@ Return ONLY valid python code. No explanations, no markdown formatting (no ```py
         generated_code = re.sub(r"```python\n", "", generated_code)
         generated_code = re.sub(r"```\n?", "", generated_code)
 
-    # Dictionary to capture the locals from exec
-    local_env = {"pd": pd, "df_copy": df.copy()}
-    
+    # ── SECURITY: Sandboxed exec ───────────────────────────────────────────
+    # Only expose pandas (pd) and the dataframe copy.
+    # No builtins means no open(), no __import__(), no os, no sys, no exec().
+    # An LLM generating `import os; os.system("rm -rf /")` will fail silently.
+    # ──────────────────────────────────────────────────────────────────────
+    import numpy as np
+    safe_globals = {
+        "__builtins__": {
+            # Minimal safe builtins only — no open, no exec, no eval, no import
+            "len": len, "range": range, "enumerate": enumerate,
+            "zip": zip, "list": list, "dict": dict, "set": set,
+            "tuple": tuple, "str": str, "int": int, "float": float,
+            "bool": bool, "print": print, "isinstance": isinstance,
+            "hasattr": hasattr, "getattr": getattr, "min": min,
+            "max": max, "sum": sum, "abs": abs, "round": round,
+        },
+        "pd": pd,
+        "np": np,
+    }
+    local_env = {"df_copy": df.copy()}
+
     try:
-        # Execute the generated code
-        exec(generated_code, globals(), local_env)
-        
-        # Call the generated function
+        exec(generated_code, safe_globals, local_env)
         if "clean_df" in local_env:
             cleaned_df = local_env["clean_df"](local_env["df_copy"])
             return cleaned_df, generated_code

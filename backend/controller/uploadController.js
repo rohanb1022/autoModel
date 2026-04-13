@@ -35,11 +35,9 @@ exports.uploadDataset = async (req, res) => {
     res.json(response.data);
 
   } catch (error) {
-    console.error("UPLOAD ERROR:", error.message);
-
+    console.error("[UPLOAD ERROR]:", error.message);
     res.status(500).json({
-      error: "ML analyze failed",
-      details: error.message,
+      error: "Dataset upload failed. Please ensure you uploaded a valid CSV file.",
     });
   }
 };

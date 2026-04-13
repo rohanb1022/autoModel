@@ -1,6 +1,6 @@
 # --- Consolidated .gitignore ---
 
-# Environment & Secrets
+# Environment & Secrets — NEVER commit these
 .env
 .env.local
 .env.*.local
@@ -20,11 +20,23 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+.ipynb_checkpoints/
+
+# ML Artifacts — transient, should not be version-controlled
 outputs/*.pkl
 outputs/*.png
 outputs/*.csv
+outputs/*.joblib
 temp.csv
-.ipynb_checkpoints/
+temp*.csv
+
+# ChromaDB vector store — contains user data, must not be committed (M2 fix)
+vector_db/
+backend-ml/vector_db/
+
+# Dataset files — never commit user data or sample data (M6 fix)
+data/*.csv
+backend-ml/data/*.csv
 
 # Build & Bundles
 dist/
@@ -35,12 +47,27 @@ out/
 bin/
 obj/
 
+# Uploads (temp user files)
+uploads/
+backend/uploads/
+
 # Logs & Temp
 *.log
 logs/
-uploads/
 temp/
 tmp/
+
+# Test & Debug files — remove from tracking (M4 fix)
+backend/test_*.js
+backend/full_error.txt
+backend/test_output.txt
+backend/check_models.js
+backend/list_models.js
+backend/list_raw_models.js
+backend/capture_error.js
+backend-ml/test*.py
+backend-ml/check_memory.py
+backend-ml/notebooks/
 
 # Editor / OS
 .vscode/

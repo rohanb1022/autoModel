@@ -4,7 +4,7 @@ import uvicorn
 import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
 # Load environment variables early
@@ -25,14 +25,29 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 # ----------------------------------------
-# CORS (allow frontend + node backend)
+# CORS — explicitly list allowed origins
+# SECURITY: allow_origins=["*"] + allow_credentials=True is invalid and
+# a security misconfiguration. Always use explicit origins in production.
 # ----------------------------------------
+_frontend_url   = os.getenv("FRONTEND_URL", "http://localhost:8080")
+_node_backend   = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+
+ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    _frontend_url,
+    _node_backend,
+]
+# De-duplicate and remove empty strings
+ALLOWED_ORIGINS = list(set(o for o in ALLOWED_ORIGINS if o))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # ----------------------------------------
@@ -50,10 +65,14 @@ app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 UPLOAD_PATH = "temp.csv"
 
 # ----------------------------------------
-# Request schema for chatbot
+# Request schemas with validation (L1 fix)
 # ----------------------------------------
 class ChatRequest(BaseModel):
-    question: str
+    question: str = Field(..., min_length=1, max_length=2000)
+
+class ConfirmTargetRequest(BaseModel):
+    target_column: str = Field(..., min_length=1, max_length=200)
+    dataset_name: str  = Field("uploaded_dataset.csv", min_length=1, max_length=500)
 
 # ----------------------------------------
 # Root route
@@ -253,30 +272,33 @@ def generate_insights(
     request: InsightRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    try:
-        from rag.rag_chat import USE_OLLAMA, call_huggingface
-        prompt = f"""
-        You are an AI data scientist. Analyze the following model training result and provide exactly 3 bullet points of short, actionable insights. Keep formatting in markdown.
-        
-        Dataset: {request.datasetName}
-        Problem Type: {request.problemType}
-        Best Model: {request.bestModel}
-        Accuracy: {request.accuracy * 100}%
-        """
-        
-        if USE_OLLAMA:
-            import ollama
-            response = ollama.chat(
-                model="phi3:mini",
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return {"insights": response["message"]["content"]}
-        else:
-            return {"insights": call_huggingface(prompt)}
-            
-    except Exception as e:
-        print("INSIGHTS ERROR:", e)
-        return {"insights": "Model trained successfully. (Insights temporarily unavailable)"}
+    # Uses Groq (gemma2-9b-it, open-source) → HuggingFace → static fallback
+    # No Gemini here — keeps open-source and avoids 15 RPM Gemini limit
+    from rag.rag_chat import call_llm_cascade
+
+    prompt = f"""You are an expert AI data scientist. Analyze the following ML training result and provide exactly 3 concise, actionable bullet points formatted in markdown.
+
+Dataset: {request.datasetName}
+Problem Type: {request.problemType}
+Best Model: {request.bestModel}
+Accuracy: {request.accuracy * 100:.1f}%
+
+Provide 3 bullet points covering:
+1. Model performance assessment — is this accuracy good or poor for this problem type?
+2. What this accuracy means in practice for the end user.
+3. One concrete next step to meaningfully improve results."""
+
+    static_fb = (
+        f"- **Performance**: Your **{request.bestModel}** achieved **{request.accuracy*100:.1f}%** accuracy "
+        f"on a {request.problemType} task — a solid baseline result.\n"
+        f"- **Interpretation**: For {request.problemType}, this score indicates the model generalises "
+        f"reasonably well; check for class imbalance if accuracy seems misleadingly high.\n"
+        f"- **Next step**: Try hyperparameter tuning (GridSearchCV) or feature engineering to push "
+        f"accuracy higher before moving to production."
+    )
+
+    insights = call_llm_cascade(prompt, static_fallback=static_fb)
+    return {"insights": insights}
 
 # ----------------------------------------
 # VISUALIZATION AI INSIGHTS (GEMMA 4)
@@ -291,31 +313,35 @@ async def get_visualization_insights(
         if not os.path.exists(plot_path):
             raise HTTPException(status_code=404, detail="Chart not found")
 
-        # Gemma 4 Multimodal Analysis via Ollama
-        import ollama
-        
-        # We specify prompts based on the chart type
-        prompt = "Analyze this data science chart. Provide exactly 2 short, bullet-pointed insights. Focus on trends or patterns."
-        if "correlation" in chart_name:
-            prompt = "Analyze this Correlation Heatmap. Which features are most strongly correlated? Provide 2 short bullet points."
-        elif "target_distribution" in chart_name:
-            prompt = "Analyze this Target Distribution chart. Is the dataset balanced or imbalanced? Provide 2 short bullet points."
+        # ---- Gemini 1.5 Flash Multimodal Analysis (replaces local Ollama/Gemma) ----
+        import google.generativeai as genai
+        import PIL.Image
 
-        # Verify if gemma is available, fallback to phi3 if not (though Gemma is preferred)
-        model_to_use = "gemma2:2b" # Using the official smaller Gemma 2 tag
-        
-        # Call Ollama with the image
-        response = ollama.generate(
-            model=model_to_use,
-            prompt=prompt,
-            images=[plot_path]
-        )
-        
-        return {"insight": response["response"]}
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY_2"))
+        gemini = genai.GenerativeModel("gemini-1.5-flash")
+
+        # Tailor the prompt based on chart type
+        if "correlation" in chart_name:
+            prompt = "Analyze this Correlation Heatmap from a machine learning dataset. Which features are most strongly correlated? Are there any multicollinearity issues? Provide exactly 2 short, bullet-pointed insights."
+        elif "target_distribution" in chart_name:
+            prompt = "Analyze this Target Distribution chart from a machine learning dataset. Is the dataset balanced or imbalanced? How might class imbalance affect model training? Provide exactly 2 short, bullet-pointed insights."
+        else:
+            prompt = "Analyze this data science chart from a machine learning workflow. Provide exactly 2 short, bullet-pointed insights about the key patterns, trends, or anomalies you observe."
+
+        image = PIL.Image.open(plot_path)
+        response = gemini.generate_content([prompt, image])
+
+        return {"insight": response.text}
 
     except Exception as e:
-        print(f"GEMMA 4 ERROR for {chart_name}: {e}")
-        return {"insight": "AI could not analyze this chart at the moment. (Ensure gemma4 is pulled in Ollama)"}
+        print(f"GEMINI VISION ERROR for {chart_name}: {e}")
+        # Friendly fallback with chart-type-specific message
+        if "correlation" in chart_name:
+            return {"insight": "• Review the heatmap for high correlations (>0.8) which may indicate multicollinearity.\n• Consider removing or combining highly correlated features before training."}
+        elif "target_distribution" in chart_name:
+            return {"insight": "• Check if target classes are balanced — imbalanced datasets may bias the model.\n• If imbalanced, consider SMOTE oversampling or adjusting class weights."}
+        else:
+            return {"insight": "• Examine this chart for outliers or unusual distributions in your features.\n• Statistical anomalies here may require additional preprocessing steps."}
 
 # ----------------------------------------
 # RAG CHATBOT
