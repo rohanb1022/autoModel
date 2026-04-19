@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
-
+from src.score_columns import score_columns, detect_problem_type
 # Load environment variables early
 load_dotenv()
 
@@ -107,7 +107,9 @@ async def analyze_dataset(
             return {"error": "Dataset must contain at least 2 columns."}
 
         # Target detection
-        target_column, problem_type, ranked = analyze_target_column(df)
+        ranked = score_columns(df)
+        target_column = ranked[0]["column"]
+        problem_type = detect_problem_type(df[target_column])
 
         # Generate EDA
         plot_target_distribution(df, target_column, problem_type)
@@ -130,6 +132,7 @@ async def analyze_dataset(
             "error": "Failed to analyze dataset",
             "details": str(e)
         }
+
 
 # ----------------------------------------
 # CONFIRM TARGET + TRAIN MODEL
@@ -166,10 +169,7 @@ async def confirm_target(
             else:
                 problem_type = "classification"
         else:
-            if unique_ratio > 0.1 and unique_values > 10:
-                problem_type = "regression"
-            else:
-                problem_type = "classification"
+            problem_type = detect_problem_type(y)
 
         import traceback
         from src.auto_healer import auto_heal_dataset
@@ -258,6 +258,7 @@ async def confirm_target(
             "details": str(e)
         }
 
+
 # ----------------------------------------
 # AI INSIGHTS
 # ----------------------------------------
@@ -299,6 +300,7 @@ Provide 3 bullet points covering:
 
     insights = call_llm_cascade(prompt, static_fallback=static_fb)
     return {"insights": insights}
+
 
 # ----------------------------------------
 # VISUALIZATION AI INSIGHTS (GEMMA 4)
@@ -343,6 +345,7 @@ async def get_visualization_insights(
         else:
             return {"insight": "• Examine this chart for outliers or unusual distributions in your features.\n• Statistical anomalies here may require additional preprocessing steps."}
 
+
 # ----------------------------------------
 # RAG CHATBOT
 # ----------------------------------------
@@ -355,6 +358,7 @@ def chat(
     user_id = current_user["id"]
     answer = ask_ai(user_id, request.question)
     return {"response": answer}
+
 
 # ----------------------------------------
 # GET SAMPLE DATA (to assist Gemini auto-healer)
@@ -377,6 +381,7 @@ async def get_sample_data(
         }
     except Exception as e:
         return {"error": str(e)}
+
 
 # ----------------------------------------
 # IMPORTANT FOR RENDER DEPLOYMENT

@@ -16,13 +16,15 @@ USE_OLLAMA = os.getenv("USE_OLLAMA", "false").lower() == "true"
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY")
 HF_API_TOKEN    = os.getenv("HF_API_TOKEN")
 
-# Groq: gemma2-9b-it gives 15,000 TPM (highest on free tier for context-heavy RAG)
-GROQ_MODEL      = "gemma2-9b-it"
+# Groq: llama-3.1-8b-instant — official replacement for decommissioned gemma2-9b-it
+# Free tier: 30 RPM, 131,072 token context window
+GROQ_MODEL      = "llama-3.1-8b-instant"
 GROQ_API_URL    = "https://api.groq.com/openai/v1/chat/completions"
 
-# HuggingFace fallback (already set up — no hard RPM limit, just queues)
+# HuggingFace fallback — standard Inference API (no extra org permissions needed)
+# router.huggingface.co requires Inference Provider permissions (403 for most accounts)
 HF_MODEL        = "microsoft/Phi-3-mini-4k-instruct"
-HF_API_URL      = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
+HF_API_URL      = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
 
 print("USE_OLLAMA    =", USE_OLLAMA)
 print("GROQ KEY      =", "✓ present" if GROQ_API_KEY else "✗ missing")
@@ -31,7 +33,7 @@ print("HF TOKEN      =", "✓ present" if HF_API_TOKEN else "✗ missing")
 
 # ============================================================
 # PROVIDER 1 — GROQ  (Primary cloud LLM)
-# Model: gemma2-9b-it  |  Free tier: 30 RPM, 15,000 TPM
+# Model: llama-3.1-8b-instant  |  Free tier: 30 RPM, 131k token context
 # Best for RAG: fast inference + strong instruction following
 # ============================================================
 

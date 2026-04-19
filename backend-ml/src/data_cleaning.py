@@ -5,6 +5,7 @@ def handle_missing_values(df: pd.DataFrame):
     print("\nHandling missing values...\n")
 
     for column in df.columns:
+        df[column] = df[column].replace("", pd.NA)
         missing_count = df[column].isnull().sum()
 
         if missing_count > 0:
@@ -50,20 +51,22 @@ def remove_duplicates(df: pd.DataFrame):
     return df
 
 def clean_formatted_numbers(df: pd.DataFrame):
-    """
-    Attempts to clean columns that are strings but actually represent formatted numbers (e.g. currency: '$13.97', '1,000.50').
-    """
     for col in df.columns:
         if df[col].dtype == object or str(df[col].dtype) == 'category':
-            try:
-                # Remove dollar signs, commas, and percentage signs
-                cleaned = df[col].astype(str).str.replace(r'[\$,%]', '', regex=True)
-                # Parse to float
-                numeric_col = pd.to_numeric(cleaned, errors='raise')
+            
+            # Remove symbols
+            cleaned = df[col].astype(str).str.replace(r'[\$,%,]', '', regex=True)
+            
+            # Try converting safely
+            numeric_col = pd.to_numeric(cleaned, errors='coerce')
+            
+            # Only convert if MOST values are numeric
+            non_null_ratio = numeric_col.notnull().sum() / len(df)
+            
+            if non_null_ratio > 0.8:
                 df[col] = numeric_col
-                print(f"Cleaned formatted numbers in column: {col}")
-            except (ValueError, TypeError, AttributeError):
-                continue
+                print(f"Converted to numeric: {col}")
+    
     return df
 
 def basic_cleaning(df):
