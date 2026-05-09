@@ -1,0 +1,25 @@
+# Environments
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary Data & Uploads
+temp.csv
+outputs/
+uploads/
+data/
+
+# Chroma DB / Vector Database
+vector_db/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
