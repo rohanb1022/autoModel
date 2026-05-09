@@ -11,89 +11,30 @@ import json
 import traceback
 
 def analyze_target_column(df: pd.DataFrame):
-    print("\nAnalyzing dataset for target column using Gemini...\n")
+    """
+    Analyzes the dataset to find the most likely target column using statistics.
+    Gemini is disabled as the API key is exhausted.
+    """
+    print("\nAnalyzing dataset for target column using statistical heuristics...\n")
     df = df.copy()
 
-    # STEP 1: Remove constant columns
+    # Step 1: Remove constant columns
     df = df.loc[:, df.nunique() > 1]
     
-    api_key = os.getenv("GEMINI_API_KEY")
-    api_key_2 = os.getenv("GEMINI_API_KEY_2")
-
-    if not api_key:
-        print("GEMINI_API_KEY not found. Fallback to basic heuristics.")
-        # Super basic fallback if Gemini isn't configured
-        best_col = df.columns[-1]
-        problem_type = "classification" if df[best_col].nunique() < 10 else "regression"
-        return best_col, problem_type, [(best_col, 10)]
-
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
-
-        df_info = df.dtypes.to_string()
-        sample = df.head(5).to_dict(orient="records")
-
-        prompt = f"""
-        You are an expert Data Scientist. Determine the best dependent variable (target column) to predict from this dataset. 
-        Determine if it is a "classification" or "regression" problem.
-
-        Columns and Types:
-        {df_info}
-
-        Sample Data (first 5 rows):
-        {json.dumps(sample, indent=2)}
-
-        Provide your response in raw JSON format strictly adhering to this schema:
-        {{
-            "target_column": "Exact Column Name",
-            "problem_type": "classification or regression",
-            "ranked": [["Col1", 10], ["Col2", 8]] // Provide top 3 candidates and their confidence score out of 10
-        }}
-        Do NOT wrap the JSON in markdown code blocks. Just return the JSON object.
-        """
-
-        try:
-            response = model.generate_content(prompt)
-        except Exception as api_err:
-            print(f"Gemini API key 1 failed: {api_err}. Falling back to key 2...")
-            if api_key_2:
-                genai.configure(api_key=api_key_2)
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                response = model.generate_content(prompt)
-            else:
-                raise api_err
-
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        if text.startswith("```"):
-            text = text[3:]
-
-        result = json.loads(text.strip())
-
-        best_column = result.get("target_column", df.columns[-1])
-        problem_type = result.get("problem_type", "classification")
-        ranked = result.get("ranked", [(best_column, 10)])
-
-        print(f"\nDetected target column via Gemini: {best_column}")
-        print(f"Detected problem type via Gemini: {problem_type}")
-
-        # Ensure target is valid, else fallback
-        if best_column not in df.columns:
-            raise ValueError(f"Gemini suggested an invalid column: {best_column}")
-
-        return best_column, problem_type.lower(), ranked
-
-    except Exception as e:
-        print("Gemini Analysis Failed. Applying Fallback due to:", e)
-        traceback.print_exc()
-        best_col = df.columns[-1]
-        problem_type = "classification" if df[best_col].nunique() < 10 else "regression"
-        return best_col, problem_type, [(best_col, 10)]
+    # Step 2: Heuristic Analysis
+    # Usually the last column is the target
+    best_col = df.columns[-1]
+    
+    # Problem type based on cardinality
+    unique_count = df[best_col].nunique()
+    if not pd.api.types.is_numeric_dtype(df[best_col]) or unique_count < 10:
+        problem_type = "classification"
+    else:
+        problem_type = "regression"
+        
+    ranked = [(best_col, 10)]
+    
+    return best_col, problem_type, ranked
 
 
 def plot_target_distribution(df, target_column, problem_type):

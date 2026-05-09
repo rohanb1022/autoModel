@@ -1,7 +1,14 @@
 import pandas as pd
 import numpy as np
+import os
+import requests
+import json
+import google.generativeai as genai
 
 def score_columns(df: pd.DataFrame):
+    # Try AI-based detection first (Llama/Groq preferred)
+    ai_target = detect_target_with_ai(df)
+    
     scores = []
 
     n_rows = len(df)
@@ -47,6 +54,11 @@ def score_columns(df: pd.DataFrame):
             score += 0.5
             reasons.append("Categorical column")
 
+        # Extra boost if AI suggested this column
+        if ai_target and col == ai_target:
+            score += 15
+            reasons.append("Highly recommended by AI Analyst")
+
         scores.append({
             "column": col,
             "score": score,
@@ -68,3 +80,59 @@ def detect_problem_type(y):
         return "classification"
 
     return "regression"
+
+def detect_target_with_ai(df: pd.DataFrame):
+    """
+    Robustly identifies the target column using a cascade of AI providers.
+    Order: local Ollama -> Groq (Llama 3.1) -> Gemini -> HuggingFace -> None
+    """
+    try:
+        cols = list(df.columns)
+        sample = df.head(5).to_dict(orient="records")
+        dtypes = {k: str(v) for k, v in df.dtypes.to_dict().items()}
+
+        prompt = f"Identify the target column from these names: {cols}. Types: {dtypes}. Sample: {sample}. Return ONLY the column name."
+
+        # 1. Try Local Ollama (Completely Free & No 429)
+        if os.getenv("USE_OLLAMA", "false").lower() == "true":
+            try:
+                import ollama
+                response = ollama.chat(model="gemma2:9b", messages=[{"role": "user", "content": prompt}])
+                suggested = response['message']['content'].strip().replace("`", "")
+                if suggested in cols: return suggested
+            except Exception: pass
+
+        # 2. Try Groq (Llama 3.1 8B - Fast & Free Cloud)
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            try:
+                print("[AI Target Detection] Trying Groq...")
+                headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
+                payload = {"model": "llama-3.1-8b-instant", "messages": [{"role": "user", "content": prompt}], "temperature": 0.1}
+                resp = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=5)
+                if resp.status_code == 200:
+                    suggested = resp.json()['choices'][0]['message']['content'].strip().replace("`", "")
+                    if suggested in cols: return suggested
+            except Exception: pass
+
+
+        # 4. Try Hugging Face (Mistral 7B Fallback)
+        hf_token = os.getenv("HF_API_TOKEN")
+        if hf_token:
+            try:
+                print("[AI Target Detection] Trying HuggingFace...")
+                headers = {"Authorization": f"Bearer {hf_token}"}
+                payload = {"inputs": prompt, "parameters": {"max_new_tokens": 20}}
+                resp = requests.post("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3", headers=headers, json=payload, timeout=5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if isinstance(data, list):
+                        suggested = data[0].get("generated_text", "").strip().replace("`", "")
+                    else:
+                        suggested = data.get("generated_text", "").strip().replace("`", "")
+                    if suggested in cols: return suggested
+            except Exception: pass
+
+    except Exception: pass
+
+    return None

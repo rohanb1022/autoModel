@@ -311,39 +311,17 @@ async def get_visualization_insights(
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        plot_path = os.path.join(OUTPUT_DIR, f"{chart_name}.png")
-        if not os.path.exists(plot_path):
-            raise HTTPException(status_code=404, detail="Chart not found")
-
-        # ---- Gemini 1.5 Flash Multimodal Analysis (replaces local Ollama/Gemma) ----
-        import google.generativeai as genai
-        import PIL.Image
-
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY_2"))
-        gemini = genai.GenerativeModel("gemini-1.5-flash")
-
-        # Tailor the prompt based on chart type
-        if "correlation" in chart_name:
-            prompt = "Analyze this Correlation Heatmap from a machine learning dataset. Which features are most strongly correlated? Are there any multicollinearity issues? Provide exactly 2 short, bullet-pointed insights."
-        elif "target_distribution" in chart_name:
-            prompt = "Analyze this Target Distribution chart from a machine learning dataset. Is the dataset balanced or imbalanced? How might class imbalance affect model training? Provide exactly 2 short, bullet-pointed insights."
-        else:
-            prompt = "Analyze this data science chart from a machine learning workflow. Provide exactly 2 short, bullet-pointed insights about the key patterns, trends, or anomalies you observe."
-
-        image = PIL.Image.open(plot_path)
-        response = gemini.generate_content([prompt, image])
-
-        return {"insight": response.text}
-
-    except Exception as e:
-        print(f"GEMINI VISION ERROR for {chart_name}: {e}")
-        # Friendly fallback with chart-type-specific message
+        # Friendly fallback as Gemini is exhausted — avoids 429 and latency
         if "correlation" in chart_name:
             return {"insight": "• Review the heatmap for high correlations (>0.8) which may indicate multicollinearity.\n• Consider removing or combining highly correlated features before training."}
         elif "target_distribution" in chart_name:
             return {"insight": "• Check if target classes are balanced — imbalanced datasets may bias the model.\n• If imbalanced, consider SMOTE oversampling or adjusting class weights."}
         else:
             return {"insight": "• Examine this chart for outliers or unusual distributions in your features.\n• Statistical anomalies here may require additional preprocessing steps."}
+
+    except Exception as e:
+        print(f"INSIGHT ERROR for {chart_name}: {e}")
+        return {"insight": "• Statistical trends are being calculated. Check back in a moment."}
 
 
 # ----------------------------------------

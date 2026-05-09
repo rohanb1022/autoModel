@@ -42,4 +42,5 @@ requests
 # NOTE: ollama is NOT listed here because it requires a local Ollama
 # server to be running (not available on cloud platforms).
 # For local development only: pip install ollama
-# Then set USE_OLLAMA=true in your .env file.
+# Local LLM Support
+ollama
