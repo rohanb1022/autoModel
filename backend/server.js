@@ -41,6 +41,9 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" })); // Body size cap
 
+// Trust proxy required for Render and express-rate-limit to work properly
+app.set("trust proxy", 1);
+
 // ── Rate Limiting (M1 fix) ─────────────────────────────────────────────────
 const rateLimit = require("express-rate-limit");
 
