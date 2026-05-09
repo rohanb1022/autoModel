@@ -16,9 +16,8 @@ USE_OLLAMA = os.getenv("USE_OLLAMA", "false").lower() == "true"
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY")
 HF_API_TOKEN    = os.getenv("HF_API_TOKEN")
 
-# Groq: llama-3.1-8b-instant — active and reliable
-# Free tier: 30 RPM, 131,072 token context window
-GROQ_MODEL      = "llama-3.1-8b-instant"
+# Groq: gemma2-9b-it — Fast, open-weights, and high performance
+GROQ_MODEL      = "gemma2-9b-it"
 GROQ_API_URL    = "https://api.groq.com/openai/v1/chat/completions"
 
 # HuggingFace fallback — using high-availability Mistral model

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BarChart3, PieChart, TrendingUp, Sparkles, Loader2, Info } from "lucide-react";
-import { ML_API_URL } from "@/config/urls";
+import { BASE_API_URL } from "@/config/urls";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -25,7 +25,7 @@ export default function Visualizations() {
     try {
       setLoadingInsights((prev) => ({ ...prev, [chartId]: true }));
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${ML_API_URL}/visualization-insights/${chartId}`, {
+      const res = await axios.get(`${BASE_API_URL}/visualizations/insight/${chartId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setInsights((prev) => ({ ...prev, [chartId]: res.data.insight }));
@@ -97,7 +97,7 @@ export default function Visualizations() {
                 {/* Plot Image */}
                 <div className="relative aspect-video md:aspect-[16/10] rounded-3xl bg-white border border-slate-100 overflow-hidden mb-6 shadow-[0_2px_15px_rgba(0,0,0,0.03)]">
                   <img 
-                    src={`${ML_API_URL}/outputs/${c.id}.png`}
+                    src={`${BASE_API_URL}/visualizations/plot/${c.id}.png`}
                     alt={c.title}
                     className="w-full h-full object-contain p-2 group-hover:scale-[1.02] transition-transform duration-700"
                     onError={(e) => {

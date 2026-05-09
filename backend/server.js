@@ -79,6 +79,8 @@ const paymentRoutes = require("./routes/paymentRoutes");
 // NOTE: /ai-test debug route has been removed (was unauthenticated, consumed Gemini quota)
 
 const chatRoutes = require("./routes/chatRoutes");
+const { getVisualizationInsight, getPlotImage } = require("./controller/visualizationController");
+const protect = require("./middleware/authMiddleware");
 
 app.use("/api", uploadLimiter, uploadRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
@@ -86,6 +88,10 @@ app.use("/api/models", modelRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/chat", chatRoutes);
+
+// Visualization Proxy Routes
+app.get("/api/visualizations/insight/:chartName", protect, getVisualizationInsight);
+app.get("/api/visualizations/plot/:filename", getPlotImage);
 
 app.get("/", (req, res) => {
   res.send("AutoModel API running");
