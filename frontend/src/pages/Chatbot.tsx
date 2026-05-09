@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { ML_API_URL } from "@/config/urls";
+import { BASE_API_URL } from "@/config/urls";
 
 interface Message {
   role: "bot" | "user";
@@ -37,7 +37,7 @@ export default function Chatbot() {
       }
 
       const response = await axios.post(
-        `${ML_API_URL}/chat`,
+        `${BASE_API_URL}/chat`,
         { question: input },
         {
           headers: {

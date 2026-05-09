@@ -78,11 +78,14 @@ const paymentRoutes = require("./routes/paymentRoutes");
 
 // NOTE: /ai-test debug route has been removed (was unauthenticated, consumed Gemini quota)
 
+const chatRoutes = require("./routes/chatRoutes");
+
 app.use("/api", uploadLimiter, uploadRoutes);
 app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/models", modelRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/chat", chatRoutes);
 
 app.get("/", (req, res) => {
   res.send("AutoModel API running");
