@@ -31,10 +31,11 @@ exports.confirmTarget = async (req, res) => {
     // Generate AI Insights from the Local ML Service (saves Gemini tokens)
     let insights = "Model trained successfully";
     try {
-      console.log("[BACKEND-DEBUG] Requesting local insight generation for:", dataset_name || data.dataset_name);
+      const insightUrl = `${ML_SERVICE_URL}/generate-insights`;
+      console.log("[BACKEND-DEBUG] Requesting local insight generation for:", dataset_name || data.dataset_name, "at URL:", insightUrl);
       
       const insightResponse = await axios.post(
-        `${ML_SERVICE_URL}/generate-insights`,
+        insightUrl,
         {
           datasetName: dataset_name || data.dataset_name,
           problemType: data.problem_type,
