@@ -39,6 +39,7 @@ def store_training_memory(user_id : str ,  data : dict):
 
     collection.add(
         documents=[text],
+        embeddings=[embedding],
         metadatas=[{"user_id": user_id}],
         ids=[str(uuid.uuid4())]
     )

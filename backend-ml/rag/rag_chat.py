@@ -1,240 +1,202 @@
+"""
+RAG Chat Module -- Production-Ready LLM Cascade
+================================================
+Uses: Groq (free) -> HuggingFace (free) -> Ollama (local) -> Offline Engine (guaranteed)
+
+All providers are FREE. No payment required for any tier.
+The final fallback (Offline Engine) makes ZERO API calls and can NEVER fail.
+"""
+
 import os
-import time
 import requests
+from dotenv import load_dotenv
 
 from rag.embedder import get_embedding
 from rag.vectordb import collection
-from rag.prompt_builder import build_prompt
+from rag.offline_engine import generate_offline_response
 
-# ============================================================
-# CONFIG
-# ============================================================
-
-# Local development: set USE_OLLAMA=true in .env with Ollama installed
-USE_OLLAMA = os.getenv("USE_OLLAMA", "false").lower() == "true"
-
-GROQ_API_KEY    = os.getenv("GROQ_API_KEY")
-HF_API_TOKEN    = os.getenv("HF_API_TOKEN")
-
-# Groq: gemma2-9b-it — Fast, open-weights, and high performance
-GROQ_MODEL      = "gemma2-9b-it"
-GROQ_API_URL    = "https://api.groq.com/openai/v1/chat/completions"
-
-# HuggingFace fallback — using high-availability Mistral model
-HF_MODEL        = "mistralai/Mistral-7B-Instruct-v0.3"
-HF_API_URL      = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
-
-print("USE_OLLAMA    =", USE_OLLAMA)
-print("GROQ KEY      =", "✓ present" if GROQ_API_KEY else "✗ missing")
-print("HF TOKEN      =", "✓ present" if HF_API_TOKEN else "✗ missing")
+load_dotenv()
 
 
-# ============================================================
-# PROVIDER 1 — GROQ  (Primary cloud LLM)
-# Model: llama-3.1-8b-instant  |  Free tier: 30 RPM, 131k token context
-# Best for RAG: fast inference + strong instruction following
-# ============================================================
+# ---------------------------------------------------------------------------
+# LLM Cascade -- all free providers, no payment needed
+# ---------------------------------------------------------------------------
 
-def call_groq(prompt: str, system_msg: str = None) -> str | None:
+def _call_groq(system_prompt: str, user_prompt: str) -> str:
     """
-    Returns the response string on success, or None on any failure.
-    Returning None signals the caller to cascade to the next provider.
+    Primary: Groq Cloud -- free tier, 30 req/min for llama-3.1-8b-instant.
+    https://console.groq.com -- no credit card needed.
     """
-    if not GROQ_API_KEY:
-        print("[GROQ] API key missing — skipping")
-        return None
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not set")
 
-    if system_msg is None:
-        system_msg = (
-            "You are an expert Machine Learning Data Analyst inside the AutoModel platform. "
-            "Use the provided training memory context to answer questions accurately and analytically. "
-            "Be concise, precise, and only use the context given."
-        )
-
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": system_msg},
-            {"role": "user",   "content": prompt},
-        ],
-        "temperature": 0.3,
-        "max_tokens": 512,
-    }
-
-    try:
-        resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
-
-        if resp.status_code == 429:
-            # Rate limited — tell caller to fall through to next provider
-            retry_after = resp.headers.get("retry-after", "unknown")
-            print(f"[GROQ] 429 rate-limited (retry-after: {retry_after}s) — cascading to HuggingFace")
-            return None
-
-        if resp.status_code != 200:
-            print(f"[GROQ] Error {resp.status_code}: {resp.text[:200]}")
-            return None
-
-        data = resp.json()
-        text = data["choices"][0]["message"]["content"].strip()
-        print("[GROQ] ✓ Response received")
-        return text
-
-    except requests.Timeout:
-        print("[GROQ] Timeout — cascading to HuggingFace")
-        return None
-    except Exception as e:
-        print(f"[GROQ] Unexpected error: {e}")
-        return None
-
-
-# ============================================================
-# PROVIDER 2 — HUGGINGFACE  (Secondary fallback)
-# Model: Phi-3-mini-4k-instruct  |  No hard RPM limit (queued)
-# Slower (~5-15s) but effectively unlimited for small apps
-# ============================================================
-
-def call_huggingface(prompt: str) -> str | None:
-    """
-    Returns the response string on success, or None on failure.
-    """
-    if not HF_API_TOKEN:
-        print("[HF] API token missing — skipping")
-        return None
-
-    headers = {
-        "Authorization": f"Bearer {HF_API_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "temperature": 0.3,
-            "max_new_tokens": 400,
-            "return_full_text": False,
+    resp = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
         },
-    }
+        json={
+            "model": "llama-3.1-8b-instant",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1024,
+        },
+        timeout=30,
+    )
+    if resp.status_code == 200:
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    raise RuntimeError(f"Groq returned {resp.status_code}: {resp.text[:200]}")
 
-    try:
-        resp = requests.post(HF_API_URL, headers=headers, json=payload, timeout=90)
 
-        if resp.status_code == 429:
-            print("[HF] 429 — also rate limited, using static fallback")
-            return None
+def _call_huggingface(system_prompt: str, user_prompt: str) -> str:
+    """
+    Fallback 1: HuggingFace Inference API -- free tier.
+    Uses Mistral 7B Instruct which supports system prompts via [INST] format.
+    """
+    hf_token = os.getenv("HF_API_TOKEN")
+    if not hf_token:
+        raise RuntimeError("HF_API_TOKEN not set")
 
-        if resp.status_code != 200:
-            print(f"[HF] Error {resp.status_code}: {resp.text[:200]}")
-            return None
+    # Mistral Instruct format
+    formatted_prompt = f"[INST] {system_prompt}\n\n{user_prompt} [/INST]"
 
+    resp = requests.post(
+        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
+        headers={"Authorization": f"Bearer {hf_token}"},
+        json={
+            "inputs": formatted_prompt,
+            "parameters": {"max_new_tokens": 512, "temperature": 0.3},
+        },
+        timeout=60,
+    )
+    if resp.status_code == 200:
         data = resp.json()
         if isinstance(data, list) and data:
-            text = data[0].get("generated_text", "").strip()
-            print("[HF] ✓ Response received")
-            return text if text else None
-        if isinstance(data, dict):
-            text = data.get("generated_text", "").strip()
-            return text if text else None
-
-        return None
-
-    except requests.Timeout:
-        print("[HF] Timeout")
-        return None
-    except Exception as e:
-        print(f"[HF] Unexpected error: {e}")
-        return None
+            text = data[0].get("generated_text", "")
+            # Strip the input prompt echo that HF sometimes returns
+            if "[/INST]" in text:
+                text = text.split("[/INST]")[-1]
+            return text.strip()
+    raise RuntimeError(f"HuggingFace returned {resp.status_code}")
 
 
-# ============================================================
-# CASCADE ROUTER  (Groq → HuggingFace → Static)
-# Used by RAG chat
-# ============================================================
-
-def call_llm_cascade(prompt: str, static_fallback: str = None) -> str:
+def _call_ollama(system_prompt: str, user_prompt: str) -> str:
     """
-    Try providers in order. The first one that returns a non-None value wins.
-    If all fail, return the static_fallback string.
+    Fallback 2: Local Ollama -- only when USE_OLLAMA=true (dev machines).
     """
-    # 1️⃣  Groq (fast, open-source Gemma, 15k TPM)
-    result = call_groq(prompt)
-    if result:
-        return result
+    if os.getenv("USE_OLLAMA", "false").lower() != "true":
+        raise RuntimeError("Ollama disabled (USE_OLLAMA != true)")
 
-    # 2️⃣  HuggingFace (slower but no hard cap)
-    result = call_huggingface(prompt)
-    if result:
-        return result
-
-    # 3️⃣  Static fallback — never break the UI
-    print("[CASCADE] All providers failed — returning static fallback")
-    return static_fallback or (
-        "I'm having trouble connecting to the AI service right now. "
-        "Please try again in a moment."
+    import ollama
+    response = ollama.chat(
+        model="phi3:mini",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
     )
+    return response["message"]["content"].strip()
 
 
-# ============================================================
-# MAIN RAG CHAT FUNCTION
-# ============================================================
+def _call_llm(system_prompt: str, user_prompt: str) -> str:
+    """
+    Cascading LLM caller: tries Groq -> HuggingFace -> Ollama.
+    All tiers are completely free.
+    """
+    providers = [
+        ("Groq", _call_groq),
+        ("HuggingFace", _call_huggingface),
+        ("Ollama", _call_ollama),
+    ]
+
+    last_error = None
+    for name, fn in providers:
+        try:
+            print(f"[CHAT] Trying {name}...")
+            result = fn(system_prompt, user_prompt)
+            print(f"[CHAT] OK - {name} responded successfully.")
+            return result
+        except Exception as e:
+            print(f"[CHAT] FAIL - {name} failed: {e}")
+            last_error = e
+
+    raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
+
+
+# ---------------------------------------------------------------------------
+# RAG Pipeline
+# ---------------------------------------------------------------------------
+
+SYSTEM_PROMPT = """You are an expert Machine Learning Data Assistant in the AutoModel platform.
+You help users understand their uploaded datasets, trained models, and ML results.
+
+RULES:
+- If the user's question relates to their specific datasets or models, use the provided Context to answer accurately.
+- If the question is a general greeting or general ML concept NOT specific to their data, answer helpfully using your general knowledge.
+- Be concise, analytical, and actionable.
+- Format responses with bullet points or numbered lists where appropriate.
+- Never fabricate specific numbers -- only reference data from the Context."""
+
 
 def ask_ai(user_id: str, question: str) -> str:
+    """
+    Main RAG entry-point called by the /chat endpoint.
+
+    LLM Cascade (all FREE):
+      1. Groq         -- fast cloud LLM, free tier
+      2. HuggingFace  -- free inference API
+      3. Ollama       -- local dev only
+      4. Offline Engine -- ZERO API calls, can NEVER fail (guaranteed)
+
+    This function is guaranteed to always return a useful response.
+    """
+    # ------------------------------------------------------------------
+    # Step 1: Retrieve context from ChromaDB
+    # ------------------------------------------------------------------
+    context = ""
     try:
-        # Step 1: embed the question
         query_embedding = get_embedding(question)
-
-        # Step 2: retrieve relevant training memory from ChromaDB
-        context = ""
-        try:
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=5,
-                where={"user_id": user_id},
-            )
-            if results and results.get("documents"):
-                docs = results["documents"][0]
-                if docs:
-                    context = "\n".join(docs)
-        except Exception as e:
-            print(f"[VectorDB] Query error: {e}")
-
-        # Step 3: build the RAG prompt
-        prompt = build_prompt(question, context)
-
-        # Step 4: local dev with Ollama, else cloud cascade
-        if USE_OLLAMA:
-            print("[CHAT] Using Ollama (local dev mode)")
-            try:
-                import ollama  # Only imported when USE_OLLAMA=true
-                response = ollama.chat(
-                    model="phi3:mini",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are an expert Machine Learning Data Assistant in AutoModel. "
-                                "Use the provided training memory to answer accurately."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                )
-                return response["message"]["content"]
-            except ImportError:
-                print("[Ollama] Package not installed — falling back to cloud")
-            except Exception as ollama_err:
-                print(f"[Ollama] Error: {ollama_err} — falling back to cloud")
-
-            # Ollama failed even in local mode → use cloud cascade as recovery
-            return call_llm_cascade(prompt)
-
-        else:
-            # Production: Groq → HuggingFace → Static
-            print("[CHAT] Cloud mode — running cascade")
-            return call_llm_cascade(prompt)
-
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=5,
+            where={"user_id": user_id},
+        )
+        if results and results.get("documents"):
+            docs = results["documents"][0]
+            if docs:
+                context = "\n---\n".join(docs)
     except Exception as e:
-        print(f"[CHAT] Outer error: {e}")
-        return "I'm having trouble accessing the dataset information right now. Please try again."
+        print(f"[VectorDB] Query error (non-fatal, continuing without context): {e}")
+
+    # ------------------------------------------------------------------
+    # Step 2: Try the LLM cascade (Groq -> HuggingFace -> Ollama)
+    # ------------------------------------------------------------------
+    try:
+        if context:
+            user_prompt = (
+                f"=== TRAINING MEMORY (Context) ===\n{context}\n\n"
+                f"=== USER QUESTION ===\n{question}"
+            )
+        else:
+            user_prompt = (
+                f"(No training memory available for this user yet.)\n\n"
+                f"=== USER QUESTION ===\n{question}"
+            )
+
+        response = _call_llm(SYSTEM_PROMPT, user_prompt)
+        return response
+
+    except Exception as llm_error:
+        print(f"[CHAT] All LLM providers failed: {llm_error}")
+        print("[CHAT] Falling back to Offline Smart Engine (guaranteed response)...")
+
+    # ------------------------------------------------------------------
+    # Step 3: GUARANTEED FALLBACK -- Offline Smart Engine
+    # No API calls. No network. No 429. Cannot fail.
+    # ------------------------------------------------------------------
+    return generate_offline_response(question, context)

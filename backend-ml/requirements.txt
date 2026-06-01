@@ -44,3 +44,9 @@ requests
 # For local development only: pip install ollama
 # Local LLM Support
 ollama
+
+# LangChain Ecosystem
+langchain
+langchain-community
+langchain-chroma
+langchain-ollama

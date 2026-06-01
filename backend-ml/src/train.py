@@ -7,12 +7,24 @@ from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.metrics import accuracy_score, r2_score
 import joblib
 
-def prepare_data(df, target_column):
+def prepare_data(df, target_column, max_rows=10000, max_categories=50):
 
     print("\nPreparing data for training...\n")
 
+    # 1. Subsample data if it's too large to reduce training latency
+    if len(df) > max_rows:
+        print(f"Subsampling data from {len(df)} to {max_rows} rows...")
+        df = df.sample(n=max_rows, random_state=42)
+
     X = df.drop(columns=[target_column])
     y = df[target_column]
+
+    # 2. Drop high-cardinality categorical columns to prevent feature explosion
+    categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+    cols_to_drop = [col for col in categorical_cols if X[col].nunique() > max_categories]
+    if cols_to_drop:
+        print(f"Dropping high-cardinality columns: {cols_to_drop}")
+        X = X.drop(columns=cols_to_drop)
 
     # convert categorical to numeric
     X = pd.get_dummies(X, drop_first=True)
@@ -53,9 +65,9 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
     if problem_type == "classification":
 
         models = {
-            "Logistic Regression": LogisticRegression(max_iter=2000),
-            "Random Forest": RandomForestClassifier(random_state=42),
-            "Decision Tree": DecisionTreeClassifier(random_state=42)
+            "Logistic Regression": LogisticRegression(max_iter=1000, n_jobs=2),
+            "Random Forest": RandomForestClassifier(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
+            "Decision Tree": DecisionTreeClassifier(max_depth=15, random_state=42)
         }
 
         for name, model in models.items():
@@ -76,9 +88,9 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
     else:
 
         models = {
-            "Linear Regression": LinearRegression(),
-            "Random Forest": RandomForestRegressor(random_state=42),
-            "Decision Tree": DecisionTreeRegressor(random_state=42)
+            "Linear Regression": LinearRegression(n_jobs=2),
+            "Random Forest": RandomForestRegressor(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
+            "Decision Tree": DecisionTreeRegressor(max_depth=15, random_state=42)
         }
 
         for name, model in models.items():

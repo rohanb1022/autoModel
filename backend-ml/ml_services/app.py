@@ -273,32 +273,58 @@ def generate_insights(
     request: InsightRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    # Uses Groq (gemma2-9b-it, open-source) → HuggingFace → static fallback
-    # No Gemini here — keeps open-source and avoids 15 RPM Gemini limit
-    from rag.rag_chat import call_llm_cascade
+    import requests as http_requests
 
-    prompt = f"""You are an expert AI data scientist. Analyze the following ML training result and provide exactly 3 concise, actionable bullet points formatted in markdown.
+    prompt = (
+        f"You are an expert AI data scientist. Analyze the following ML training result "
+        f"and provide exactly 3 concise, actionable bullet points formatted in markdown.\n\n"
+        f"Dataset: {request.datasetName}\n"
+        f"Problem Type: {request.problemType}\n"
+        f"Best Model: {request.bestModel}\n"
+        f"Accuracy: {request.accuracy * 100:.1f}%\n\n"
+        f"Provide 3 bullet points covering:\n"
+        f"1. Model performance assessment — is this accuracy good or poor for this problem type?\n"
+        f"2. What this accuracy means in practice for the end user.\n"
+        f"3. One concrete next step to meaningfully improve results."
+    )
 
-Dataset: {request.datasetName}
-Problem Type: {request.problemType}
-Best Model: {request.bestModel}
-Accuracy: {request.accuracy * 100:.1f}%
+    # Try Groq first (free), then fall back to a static response
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        try:
+            resp = http_requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {groq_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [
+                        {"role": "system", "content": "You are an expert AI data scientist. Be concise."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 512,
+                },
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                insights = resp.json()["choices"][0]["message"]["content"].strip()
+                return {"insights": insights}
+            print(f"[INSIGHTS] Groq returned {resp.status_code}")
+        except Exception as e:
+            print(f"[INSIGHTS] Groq error: {e}")
 
-Provide 3 bullet points covering:
-1. Model performance assessment — is this accuracy good or poor for this problem type?
-2. What this accuracy means in practice for the end user.
-3. One concrete next step to meaningfully improve results."""
-
-    static_fb = (
+    # Static fallback — always works, no external dependency
+    insights = (
         f"- **Performance**: Your **{request.bestModel}** achieved **{request.accuracy*100:.1f}%** accuracy "
         f"on a {request.problemType} task — a solid baseline result.\n"
         f"- **Interpretation**: For {request.problemType}, this score indicates the model generalises "
-        f"reasonably well; check for class imbalance if accuracy seems misleadingly high.\n"
-        f"- **Next step**: Try hyperparameter tuning (GridSearchCV) or feature engineering to push "
+        f"reasonably well.\n"
+        f"- **Next step**: Try hyperparameter tuning or feature engineering to push "
         f"accuracy higher before moving to production."
     )
-
-    insights = call_llm_cascade(prompt, static_fallback=static_fb)
     return {"insights": insights}
 
 
