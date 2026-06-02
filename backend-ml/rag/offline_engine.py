@@ -40,8 +40,13 @@ _INTENT_KEYWORDS = {
         "list columns", "all columns", "column names", "what columns",
         "which columns", "show columns", "list all", "useless columns",
         "dropped columns", "removed columns", "irrelevant columns",
-        "useless features", "important columns", "feature list",
+        "useless features", "feature list",
         "what features", "list features",
+    ],
+    "importance": [
+        "importance", "impact", "most impactful", "important columns",
+        "important features", "which features are important", "feature importance",
+        "most important", "what drives", "influential", "influence", "impactful",
     ],
     "dataset_info": [
         "dataset", "data", "rows", "features", "shape",
@@ -109,12 +114,13 @@ def _parse_training_context(context: str) -> list[dict]:
         patterns = {
             "dataset_name": r"Dataset\s*Name:\s*(.+)",
             "rows": r"Rows:\s*(\S+)",
-            "columns": r"Columns:\s*(\S+)",
+            "columns": r"Columns\s*\(Count\):\s*(\S+)",
             "target": r"Target\s*Column:\s*(.+)",
             "problem_type": r"Problem\s*Type:\s*(.+)",
             "best_model": r"Best\s*Model:\s*(.+)",
             "accuracy": r"Accuracy:\s*(\S+)",
             "f1_score": r"F1\s*Score:\s*(\S+)",
+            "top_features": r"Top\s*Features:\s*(.+)",
             "notes": r"Notes?\s*[:\n]\s*(.+)",
         }
 
@@ -539,6 +545,54 @@ def _respond_general(records: list[dict], question: str) -> str:
     )
 
 
+def _respond_importance(records: list[dict]) -> str:
+    if not records:
+        return (
+            "I don't have any training history in memory yet. "
+            "Please upload a dataset and train a model first to analyze column impact!"
+        )
+    r = records[-1]
+    top_feats_str = r.get("top_features", "N/A")
+    dataset = r.get("dataset_name", "your dataset")
+    target = r.get("target", "the target")
+    
+    if not top_feats_str or top_feats_str == "N/A":
+        return (
+            f"For your dataset **{dataset}**, I don't have detailed feature importance scores stored.\n"
+            f"However, the model was trained to predict `{target}` using the other columns. "
+            f"Typically, columns like numeric measurements or high-variance numeric features "
+            f"have the most impact on predictions."
+        )
+    
+    feats = []
+    for part in top_feats_str.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        # Split feature name and score
+        match = re.match(r"(.+)\s*\((.+)\)", part)
+        if match:
+            name, score = match.groups()
+            feats.append((name.strip(), score.strip()))
+        else:
+            feats.append((part, ""))
+            
+    lines = [
+        f"Here are the most impactful columns (features) for predicting **{target}** in **{dataset}**:\n",
+    ]
+    for i, (name, score) in enumerate(feats, 1):
+        if score:
+            lines.append(f"{i}. `{name}` (Relative Impact/Importance: {score})")
+        else:
+            lines.append(f"{i}. `{name}`")
+            
+    lines.append(
+        f"\nThese features were identified as having the strongest mathematical influence "
+        f"on the **{r.get('best_model', 'trained')}** model's predictions."
+    )
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Main Entry Point — called by rag_chat.py as final fallback
 # ---------------------------------------------------------------------------
@@ -548,6 +602,7 @@ _INTENT_HANDLERS = {
     "accuracy": _respond_accuracy,
     "model_info": _respond_model_info,
     "columns": _respond_columns,
+    "importance": _respond_importance,
     "dataset_info": _respond_dataset_info,
     "improvement": _respond_improvement,
     "problem_type": _respond_problem_type,

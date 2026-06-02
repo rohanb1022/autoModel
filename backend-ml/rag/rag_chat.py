@@ -22,9 +22,45 @@ load_dotenv()
 # LLM Cascade -- all free providers, no payment needed
 # ---------------------------------------------------------------------------
 
+def _call_gemini(system_prompt: str, user_prompt: str) -> str:
+    """
+    Primary: Gemini 1.5 Flash -- free tier, 15 req/min.
+    Uses pre-configured keys in the environment.
+    """
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY_2")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY not set")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": f"{system_prompt}\n\n{user_prompt}"}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 1024
+        }
+    }
+    
+    resp = requests.post(url, headers=headers, json=payload, timeout=20)
+    if resp.status_code == 200:
+        res_json = resp.json()
+        try:
+            return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError):
+            raise RuntimeError(f"Unexpected response structure from Gemini: {res_json}")
+    raise RuntimeError(f"Gemini returned {resp.status_code}: {resp.text[:200]}")
+
+
 def _call_groq(system_prompt: str, user_prompt: str) -> str:
     """
-    Primary: Groq Cloud -- free tier, 30 req/min for llama-3.1-8b-instant.
+    Fallback 1: Groq Cloud -- free tier, 30 req/min for llama-3.1-8b-instant.
     https://console.groq.com -- no credit card needed.
     """
     api_key = os.getenv("GROQ_API_KEY")
@@ -55,7 +91,7 @@ def _call_groq(system_prompt: str, user_prompt: str) -> str:
 
 def _call_huggingface(system_prompt: str, user_prompt: str) -> str:
     """
-    Fallback 1: HuggingFace Inference API -- free tier.
+    Fallback 2: HuggingFace Inference API -- free tier.
     Uses Mistral 7B Instruct which supports system prompts via [INST] format.
     """
     hf_token = os.getenv("HF_API_TOKEN")
@@ -87,7 +123,7 @@ def _call_huggingface(system_prompt: str, user_prompt: str) -> str:
 
 def _call_ollama(system_prompt: str, user_prompt: str) -> str:
     """
-    Fallback 2: Local Ollama -- only when USE_OLLAMA=true (dev machines).
+    Fallback 3: Local Ollama -- only when USE_OLLAMA=true (dev machines).
     """
     if os.getenv("USE_OLLAMA", "false").lower() != "true":
         raise RuntimeError("Ollama disabled (USE_OLLAMA != true)")
@@ -105,10 +141,11 @@ def _call_ollama(system_prompt: str, user_prompt: str) -> str:
 
 def _call_llm(system_prompt: str, user_prompt: str) -> str:
     """
-    Cascading LLM caller: tries Groq -> HuggingFace -> Ollama.
+    Cascading LLM caller: tries Gemini -> Groq -> HuggingFace -> Ollama.
     All tiers are completely free.
     """
     providers = [
+        ("Gemini", _call_gemini),
         ("Groq", _call_groq),
         ("HuggingFace", _call_huggingface),
         ("Ollama", _call_ollama),

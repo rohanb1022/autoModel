@@ -202,7 +202,7 @@ async def confirm_target(
         try:
             # First attempt
             X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
-            best_model_name, best_score = train_models(X_train, X_test, y_train, y_test, problem_type)
+            best_model_name, best_score, top_features = train_models(X_train, X_test, y_train, y_test, problem_type)
         except Exception as first_error:
             # We hit an error! Kick in the Auto-Healer.
             traceback_str = traceback.format_exc()
@@ -226,7 +226,7 @@ async def confirm_target(
                 
                 # Second attempt
                 X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
-                best_model_name, best_score = train_models(X_train, X_test, y_train, y_test, problem_type)
+                best_model_name, best_score, top_features = train_models(X_train, X_test, y_train, y_test, problem_type)
 
                 system_messages.append({
                     "type": "success",
@@ -259,6 +259,7 @@ async def confirm_target(
                 "problem_type": problem_type,
                 "best_model": best_model_name,
                 "score": round(best_score, 4),
+                "top_features": top_features,
                 "notes": "User-confirmed training result"
             }
         )
@@ -296,7 +297,7 @@ def generate_insights(
     request: InsightRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    import requests as http_requests
+    import google.generativeai as genai
 
     prompt = (
         f"You are an expert AI data scientist. Analyze the following ML training result "
@@ -311,33 +312,22 @@ def generate_insights(
         f"3. One concrete next step to meaningfully improve results."
     )
 
-    # Try Groq first (free), then fall back to a static response
-    groq_key = os.getenv("GROQ_API_KEY")
-    if groq_key:
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
         try:
-            resp = http_requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {groq_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.1-8b-instant",
-                    "messages": [
-                        {"role": "system", "content": "You are an expert AI data scientist. Be concise."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "temperature": 0.3,
-                    "max_tokens": 512,
-                },
-                timeout=30,
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(
+                    temperature=0.3,
+                    max_output_tokens=512,
+                )
             )
-            if resp.status_code == 200:
-                insights = resp.json()["choices"][0]["message"]["content"].strip()
-                return {"insights": insights}
-            print(f"[INSIGHTS] Groq returned {resp.status_code}")
+            if response.text:
+                return {"insights": response.text.strip()}
         except Exception as e:
-            print(f"[INSIGHTS] Groq error: {e}")
+            print(f"[INSIGHTS] Gemini error: {e}")
 
     # Static fallback — always works, no external dependency
     insights = (

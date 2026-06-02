@@ -33,6 +33,7 @@ def store_training_memory(user_id : str ,  data : dict):
         Best Model: {data.get('best_model', 'N/A')}
         Accuracy: {data.get('accuracy', data.get('score', 'N/A'))}
         F1 Score: {data.get('f1_score', 'N/A')}
+        Top Features: {', '.join([f"{name} ({score:.4f})" for name, score in data.get('top_features', [])]) if data.get('top_features') else 'N/A'}
         
         NOTES
         {data.get('notes', 'No notes.')}

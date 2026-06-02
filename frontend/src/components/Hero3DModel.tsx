@@ -173,9 +173,10 @@ const Hero3DModel = () => (
   <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
     <Canvas
       camera={{ position: [0, 0, 6.2], fov: 48 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: true }}
       style={{ background: 'transparent' }}
       dpr={[1, 2]}
+      frameloop="always"
     >
       <Scene />
       <OrbitControls

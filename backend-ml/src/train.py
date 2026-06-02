@@ -118,6 +118,42 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
     print("Best model saved to outputs/best_model.pkl")
 
     best_score = results[best_model_name]
+    
+    # Extract top feature importances
+    top_features = get_top_features(best_model, X_train.columns)
 
-    return best_model_name, best_score
+    return best_model_name, best_score, top_features
+
+
+def get_top_features(model, feature_names, top_n=5):
+    """
+    Extracts top N feature importances or coefficients from a model.
+    Returns a list of (feature_name, importance_score) tuples.
+    """
+    import numpy as np
+    try:
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+        elif hasattr(model, "coef_"):
+            coef = model.coef_
+            # For multi-class classification, coefficients can be 2D.
+            # Take the mean absolute value across classes.
+            if len(coef.shape) > 1:
+                importances = np.mean(np.abs(coef), axis=0)
+            else:
+                importances = np.abs(coef)
+        else:
+            return []
+
+        # Get indices of top features
+        indices = np.argsort(importances)[::-1]
+        top_features = []
+        for i in indices[:top_n]:
+            if i < len(feature_names):
+                top_features.append((feature_names[i], float(importances[i])))
+        return top_features
+    except Exception as e:
+        print(f"Error extracting feature importances: {e}")
+        return []
+
 

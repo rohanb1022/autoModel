@@ -36,27 +36,39 @@ exports.uploadDataset = async (req, res) => {
       
       // 2. Call ML Service /analyze with dataset_id
       try {
-        const response = await axios.post(
-          `${ML_SERVICE_URL}/analyze`,
-          { dataset_id: datasetId, dataset_name: req.file.originalname },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-          }
-        );
+        const response = await fetch(`${ML_SERVICE_URL}/analyze`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token || "",
+          },
+          body: JSON.stringify({ dataset_id: datasetId, dataset_name: req.file.originalname })
+        });
         
-        fs.unlinkSync(filePath); // delete local temp file on node
+        let mlData;
+        try {
+          mlData = await response.json();
+        } catch (e) {
+          throw new Error("Failed to parse ML response");
+        }
+
+        if (!response.ok) {
+          throw { response: { status: response.status, data: mlData } };
+        }
+        
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath); // delete local temp file on node
+        }
         
         // Add dataset_id to response so frontend can use it if needed
-        const mlData = response.data;
         mlData.dataset_id = datasetId;
         
         res.json(mlData);
       } catch (mlError) {
         console.error("[ML ANALYZE ERROR]:", mlError.response?.data || mlError.message);
-        fs.unlinkSync(filePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
         res.status(mlError.response?.status || 500).json({
           error: "ML Analysis failed.",
           details: mlError.response?.data || mlError.message
