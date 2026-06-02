@@ -97,7 +97,7 @@ async def analyze_dataset(
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        user_id = current_user["id"]
+        print("[ANALYZE REQUEST] Received:", data.dict())
         token = req.headers.get("Authorization")
 
         # Fetch dataset from Node.js backend GridFS
