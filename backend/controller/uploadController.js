@@ -3,6 +3,7 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 const { GridFSBucket } = require("mongodb");
 const { ML_SERVICE_URL } = require("../config/urls");
+const { logError } = require("../utils/errorLogger.js");
 
 exports.uploadDataset = async (req, res) => {
   try {
@@ -28,6 +29,7 @@ exports.uploadDataset = async (req, res) => {
 
     uploadStream.on('error', (error) => {
       console.error("[GRIDFS UPLOAD ERROR]:", error);
+      logError("GRIDFS UPLOAD ERROR", error);
       res.status(500).json({ error: "Failed to store dataset securely." });
     });
 
@@ -66,6 +68,7 @@ exports.uploadDataset = async (req, res) => {
         res.json(mlData);
       } catch (mlError) {
         console.error("[ML ANALYZE ERROR]:", mlError.response?.data || mlError.message);
+        logError("ML ANALYZE ERROR", mlError);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
@@ -78,6 +81,7 @@ exports.uploadDataset = async (req, res) => {
 
   } catch (error) {
     console.error("[UPLOAD ERROR]:", error.message);
+    logError("UPLOAD ERROR", error);
     res.status(500).json({ error: "Dataset upload failed." });
   }
 };

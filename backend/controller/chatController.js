@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { ML_SERVICE_URL } = require("../config/urls");
+const { logError } = require("../utils/errorLogger.js");
 
 exports.handleChat = async (req, res) => {
   try {
@@ -25,6 +26,7 @@ exports.handleChat = async (req, res) => {
     res.json(response.data);
   } catch (error) {
     console.error("CHAT PROXY ERROR:", error.response?.data || error.message);
+    logError("CHAT PROXY ERROR", error);
     res.status(error.response?.status || 500).json({
       error: "The AI assistant is temporarily unavailable.",
       details: error.response?.data?.detail || error.message

@@ -4,6 +4,29 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.writeFileSync(path.join(__dirname, "last_server_error.txt"), `${new Date().toISOString()}\nUNHANDLED REJECTION:\n${reason?.stack || reason}\n\n`);
+  } catch (e) {
+    console.error("Failed to write rejection log:", e);
+  }
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception thrown:", err);
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.writeFileSync(path.join(__dirname, "last_server_error.txt"), `${new Date().toISOString()}\nUNCAUGHT EXCEPTION:\n${err.stack || err}\n\n`);
+  } catch (e) {
+    console.error("Failed to write exception log:", e);
+  }
+  process.exit(1);
+});
+
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
@@ -117,9 +140,23 @@ app.get("/", (req, res) => {
 // H2 fix: Never leak stack traces or internal error details to clients
 app.use((err, req, res, next) => {
   console.error("[ERROR]", err.stack);
-  const statusCode = err.statusCode || 500;
+  
+  // Set status code to 400 for client/multer validation errors
+  let statusCode = err.statusCode || 500;
+  if (err.name === "MulterError" || err.message.includes("Only CSV files are allowed")) {
+    statusCode = 400;
+  }
+
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.writeFileSync(path.join(__dirname, "last_server_error.txt"), `${new Date().toISOString()}\nStatus: ${statusCode}\n${err.stack}\n\n`);
+  } catch (e) {
+    console.error("Failed to write error log:", e);
+  }
+
   res.status(statusCode).json({
-    error: IS_PRODUCTION
+    error: IS_PRODUCTION && statusCode === 500
       ? "An internal server error occurred."
       : err.message,
   });

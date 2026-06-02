@@ -2,6 +2,7 @@ const axios = require("axios");
 const ModelRun = require("../models/ModelRun.js");
 const SystemMessage = require("../models/SystemMessage.js");
 const { ML_SERVICE_URL } = require("../config/urls.js");
+const { logError } = require("../utils/errorLogger.js");
 
 exports.confirmTarget = async (req, res) => {
   try {
@@ -98,6 +99,7 @@ exports.confirmTarget = async (req, res) => {
 
   } catch (error) {
     console.error("CONFIRM TARGET ERROR:", error.message);
+    logError("CONFIRM TARGET ERROR", error);
     res.status(500).json({
       error: "Training failed",
       details: error.response?.data?.details || error.message,

@@ -21,7 +21,9 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error("Only CSV files are allowed. Please upload a valid .csv file."), false);
+      const error = new Error("Only CSV files are allowed. Please upload a valid .csv file.");
+      error.statusCode = 400;
+      cb(error, false);
     }
   },
 });
