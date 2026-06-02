@@ -77,7 +77,8 @@ export default function Upload() {
         },
         body: JSON.stringify({
           target_column: target,
-          dataset_name: analysis?.dataset_name
+          dataset_name: analysis?.dataset_name,
+          dataset_id: analysis?.dataset_id
         }),
       });
 

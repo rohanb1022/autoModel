@@ -19,9 +19,14 @@ def prepare_data(df, target_column, max_rows=10000, max_categories=50):
     X = df.drop(columns=[target_column])
     y = df[target_column]
 
-    # 2. Drop high-cardinality categorical columns to prevent feature explosion
+    # 2. Find constant columns
+    constant_cols = [col for col in X.columns if X[col].nunique() <= 1]
+    
+    # 3. Drop high-cardinality categorical columns to prevent feature explosion
     categorical_cols = X.select_dtypes(include=['object', 'category']).columns
-    cols_to_drop = [col for col in categorical_cols if X[col].nunique() > max_categories]
+    high_card_cols = [col for col in categorical_cols if X[col].nunique() > max_categories]
+    
+    cols_to_drop = list(set(constant_cols + high_card_cols))
     if cols_to_drop:
         print(f"Dropping high-cardinality columns: {cols_to_drop}")
         X = X.drop(columns=cols_to_drop)
@@ -52,7 +57,7 @@ def prepare_data(df, target_column, max_rows=10000, max_categories=50):
     print("Training samples:", X_train.shape[0])
     print("Testing samples:", X_test.shape[0])
 
-    return X_train, X_test, y_train, y_test
+    return X_train, X_test, y_train, y_test, cols_to_drop
 
 
 def train_models(X_train, X_test, y_train, y_test, problem_type):

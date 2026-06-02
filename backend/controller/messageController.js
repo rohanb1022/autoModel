@@ -28,13 +28,15 @@ exports.getAIAdvice = async (req, res) => {
 
     // 1. Get sample data from ML service
     let sampleData = "No sample data available";
-    try {
-      const mlResponse = await axios.get(`${ML_SERVICE_URL}/sample-data`, {
-        headers: { Authorization: req.headers.authorization }
-      });
-      sampleData = mlResponse.data.sample || "No sample records available";
-    } catch (err) {
-      console.warn("Could not fetch sample data from ML Service:", err.message);
+    if (message.datasetId) {
+      try {
+        const mlResponse = await axios.get(`${ML_SERVICE_URL}/sample-data?dataset_id=${message.datasetId}`, {
+          headers: { Authorization: req.headers.authorization }
+        });
+        sampleData = mlResponse.data.sample || "No sample records available";
+      } catch (err) {
+        console.warn("Could not fetch sample data from ML Service:", err.message);
+      }
     }
 
     // 2. Call Gemini

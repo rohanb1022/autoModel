@@ -44,37 +44,52 @@ app.use(express.json({ limit: "1mb" })); // Body size cap
 // Trust proxy required for Render and express-rate-limit to work properly
 app.set("trust proxy", 1);
 
-// ── Rate Limiting (M1 fix) ─────────────────────────────────────────────────
+// ── Rate Limiting ───────────────────────────────────────────────────────────
 const rateLimit = require("express-rate-limit");
 
+// Auth: tight limit — brute-force protection
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,                   // 10 login/register attempts per window
-  message: { error: "Too many requests from this IP, please try again later." },
+  windowMs: 15 * 60 * 1000,   // 15 minutes
+  max: 20,                      // 20 attempts per window
+  message: { error: "Too many auth requests from this IP, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
+// Upload: tight limit — expensive operations
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 20,
   message: { error: "Upload rate limit exceeded. Please wait before uploading again." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-const generalLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60,                   // 60 general requests per minute
+// Chat: moderate limit — LLM calls are expensive
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,    // 1 minute
+  max: 30,                      // 30 chat messages per minute
+  message: { error: "Chat rate limit exceeded. Please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-app.use(generalLimiter); // Apply general limit to all routes
+// General: generous limit — covers all dashboard data-fetching endpoints
+// A SPA dashboard fires many parallel requests on page load (models, messages,
+// insights, visualizations, etc.) so this needs to be high.
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,    // 1 minute
+  max: 300,                     // 300 requests per minute — generous for SPA
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(generalLimiter);
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 const messageRoutes = require("./routes/messageRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const datasetRoutes = require("./routes/datasetRoutes");
 
 // NOTE: /ai-test debug route has been removed (was unauthenticated, consumed Gemini quota)
 
@@ -87,7 +102,8 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/models", modelRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/chat", chatRoutes);
+app.use("/api/dataset", datasetRoutes);
+app.use("/api/chat", chatLimiter, chatRoutes);
 
 // Visualization Proxy Routes
 app.get("/api/visualizations/insight/:chartName", protect, getVisualizationInsight);

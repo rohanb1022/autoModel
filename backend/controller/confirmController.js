@@ -5,7 +5,7 @@ const { ML_SERVICE_URL } = require("../config/urls.js");
 
 exports.confirmTarget = async (req, res) => {
   try {
-    const { target_column, dataset_name } = req.body;
+    const { target_column, dataset_name, dataset_id } = req.body;
     const token = req.headers.authorization;
 
     console.log(`[BACKEND] Confirming target: ${target_column} for dataset: ${dataset_name}`);
@@ -14,10 +14,14 @@ exports.confirmTarget = async (req, res) => {
       return res.status(400).json({ error: "Target column is required" });
     }
 
+    if (!dataset_id) {
+      return res.status(400).json({ error: "Dataset ID is required" });
+    }
+
     // Call ML service to confirm target and start training
     const response = await axios.post(
       `${ML_SERVICE_URL}/confirm-target`,
-      { target_column, dataset_name },
+      { target_column, dataset_name, dataset_id },
       {
         headers: {
           Authorization: token,
@@ -61,6 +65,7 @@ exports.confirmTarget = async (req, res) => {
        const newMsg = await SystemMessage.create({
           userId: req.user._id,
           datasetName: dataset_name || data.dataset_name || "uploaded_dataset.csv",
+          datasetId: dataset_id,
           type: msg.type || "info",
           title: msg.title || "System Alert",
           content: msg.content || "An automatic intervention occurred.",

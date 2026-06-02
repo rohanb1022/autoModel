@@ -11,6 +11,9 @@ const systemMessageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    datasetId: {
+      type: String,
+    },
     type: {
       type: String,
       enum: ["error", "success", "info"],

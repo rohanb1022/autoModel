@@ -2,7 +2,9 @@ import os
 import shutil
 import uvicorn
 import pandas as pd
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
+import io
+import requests as http_requests
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -60,9 +62,8 @@ if not os.path.exists(OUTPUT_DIR):
 app.mount("/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
 
 # ----------------------------------------
-# File path for uploaded dataset
+# Helper function for user-specific upload path (deprecated)
 # ----------------------------------------
-UPLOAD_PATH = "temp.csv"
 
 # ----------------------------------------
 # Request schemas with validation (L1 fix)
@@ -70,9 +71,14 @@ UPLOAD_PATH = "temp.csv"
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
 
+class AnalyzeRequest(BaseModel):
+    dataset_id: str
+    dataset_name: str
+
 class ConfirmTargetRequest(BaseModel):
     target_column: str = Field(..., min_length=1, max_length=200)
     dataset_name: str  = Field("uploaded_dataset.csv", min_length=1, max_length=500)
+    dataset_id: str
 
 # ----------------------------------------
 # Root route
@@ -86,16 +92,21 @@ def home():
 # ----------------------------------------
 @app.post("/analyze")
 async def analyze_dataset(
-    file: UploadFile = File(...),
+    data: AnalyzeRequest,
+    req: Request,
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        # Save uploaded file
-        with open(UPLOAD_PATH, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        user_id = current_user["id"]
+        token = req.headers.get("Authorization")
 
-        # Load dataset
-        df = pd.read_csv(UPLOAD_PATH)
+        # Fetch dataset from Node.js backend GridFS
+        resp = http_requests.get(f"{_node_backend}/api/dataset/{data.dataset_id}/download", headers={"Authorization": token})
+        if resp.status_code != 200:
+            return {"error": f"Failed to download dataset: {resp.text}"}
+
+        # Load dataset into memory
+        df = pd.read_csv(io.BytesIO(resp.content))
 
         if df.empty:
             return {"error": "Uploaded file is empty."}
@@ -117,7 +128,7 @@ async def analyze_dataset(
         plot_feature_distributions(df)
 
         return {
-            "dataset_name": file.filename,
+            "dataset_name": data.dataset_name,
             "rows": df.shape[0],
             "columns_count": df.shape[1],
             "all_columns": list(df.columns),
@@ -139,14 +150,24 @@ async def analyze_dataset(
 # ----------------------------------------
 @app.post("/confirm-target")
 async def confirm_target(
-    data: dict,
+    data: ConfirmTargetRequest,
+    req: Request,
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        target_column = data.get("target_column")
-        dataset_name = data.get("dataset_name", "uploaded_dataset.csv")
+        target_column = data.target_column
+        dataset_name = data.dataset_name
 
-        df = pd.read_csv(UPLOAD_PATH)
+        user_id = current_user["id"]
+        token = req.headers.get("Authorization")
+
+        # Fetch dataset from Node.js backend GridFS
+        resp = http_requests.get(f"{_node_backend}/api/dataset/{data.dataset_id}/download", headers={"Authorization": token})
+        if resp.status_code != 200:
+            return {"error": f"Failed to download dataset: {resp.text}"}
+
+        # Load dataset into memory
+        df = pd.read_csv(io.BytesIO(resp.content))
         df = basic_cleaning(df)
 
         if target_column not in df.columns:
@@ -180,7 +201,7 @@ async def confirm_target(
 
         try:
             # First attempt
-            X_train, X_test, y_train, y_test = prepare_data(df, target_column)
+            X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
             best_model_name, best_score = train_models(X_train, X_test, y_train, y_test, problem_type)
         except Exception as first_error:
             # We hit an error! Kick in the Auto-Healer.
@@ -204,7 +225,7 @@ async def confirm_target(
                 })
                 
                 # Second attempt
-                X_train, X_test, y_train, y_test = prepare_data(df, target_column)
+                X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
                 best_model_name, best_score = train_models(X_train, X_test, y_train, y_test, problem_type)
 
                 system_messages.append({
@@ -232,6 +253,8 @@ async def confirm_target(
                 "dataset_name": dataset_name,
                 "rows": df.shape[0],
                 "columns": df.shape[1],
+                "all_columns": list(df.columns),
+                "dropped_columns": dropped_cols,
                 "target": target_column,
                 "problem_type": problem_type,
                 "best_model": best_model_name,
@@ -369,13 +392,19 @@ def chat(
 # ----------------------------------------
 @app.get("/sample-data")
 async def get_sample_data(
+    dataset_id: str,
+    req: Request,
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        if not os.path.exists(UPLOAD_PATH):
-            return {"error": "No dataset currently active."}
+        user_id = current_user["id"]
+        token = req.headers.get("Authorization")
+
+        resp = http_requests.get(f"{_node_backend}/api/dataset/{dataset_id}/download", headers={"Authorization": token})
+        if resp.status_code != 200:
+            return {"error": f"Failed to download dataset: {resp.text}"}
             
-        df = pd.read_csv(UPLOAD_PATH)
+        df = pd.read_csv(io.BytesIO(resp.content))
         # Return first 10 rows as dictionary records
         sample = df.head(10).to_dict(orient="records")
         return {

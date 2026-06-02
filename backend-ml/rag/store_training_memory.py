@@ -13,7 +13,9 @@ def store_training_memory(user_id : str ,  data : dict):
         best_model,
         accuracy,
         f1_score,
-        notes
+        notes,
+        all_columns,
+        dropped_columns
     }
     """
 
@@ -21,7 +23,9 @@ def store_training_memory(user_id : str ,  data : dict):
         DATASET REPORT
         Dataset Name: {data.get('dataset_name', 'N/A')}
         Rows: {data.get('rows', 'N/A')}
-        Columns: {data.get('columns', 'N/A')}
+        Columns (Count): {data.get('columns', 'N/A')}
+        All Columns: {', '.join(data.get('all_columns', []))}
+        Useless/Dropped Columns: {', '.join(data.get('dropped_columns', [])) if data.get('dropped_columns') else 'None'}
         Target Column: {data.get('target', 'N/A')}
         Problem Type: {data.get('problem_type', 'N/A')}
         
@@ -36,6 +40,12 @@ def store_training_memory(user_id : str ,  data : dict):
 
 
     embedding = get_embedding(text)
+
+    # Delete any existing memory for this user so the chatbot only remembers the latest dataset
+    try:
+        collection.delete(where={"user_id": user_id})
+    except Exception as e:
+        print(f"Error clearing previous memory: {e}")
 
     collection.add(
         documents=[text],
