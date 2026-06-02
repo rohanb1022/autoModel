@@ -36,8 +36,15 @@ _INTENT_KEYWORDS = {
         "random forest", "xgboost", "logistic", "linear", "svm",
         "decision tree", "gradient", "neural",
     ],
+    "columns": [
+        "list columns", "all columns", "column names", "what columns",
+        "which columns", "show columns", "list all", "useless columns",
+        "dropped columns", "removed columns", "irrelevant columns",
+        "useless features", "important columns", "feature list",
+        "what features", "list features",
+    ],
     "dataset_info": [
-        "dataset", "data", "rows", "columns", "features", "shape",
+        "dataset", "data", "rows", "features", "shape",
         "how many", "size", "uploaded", "csv", "file",
     ],
     "improvement": [
@@ -117,6 +124,20 @@ def _parse_training_context(context: str) -> list[dict]:
                 val = match.group(1).strip()
                 if val and val.lower() != "n/a":
                     record[key] = val
+
+        # Extract list fields that are comma-separated
+        all_cols_match = re.search(r"All\s*Columns:\s*(.+)", chunk, re.IGNORECASE)
+        if all_cols_match:
+            raw = all_cols_match.group(1).strip()
+            record["all_columns"] = [c.strip() for c in raw.split(",") if c.strip()]
+
+        dropped_match = re.search(r"Useless/Dropped\s*Columns:\s*(.+)", chunk, re.IGNORECASE)
+        if dropped_match:
+            raw = dropped_match.group(1).strip()
+            if raw.lower() not in ("none", "n/a", ""):
+                record["dropped_columns"] = [c.strip() for c in raw.split(",") if c.strip()]
+            else:
+                record["dropped_columns"] = []
 
         if record:
             records.append(record)
@@ -274,16 +295,88 @@ def _respond_dataset_info(records: list[dict]) -> str:
     cols = r.get("columns", "unknown")
     target = r.get("target", "unknown")
     ptype = r.get("problem_type", "unknown")
+    all_cols = r.get("all_columns", [])
+
+    col_line = ""
+    if all_cols:
+        col_line = f"- **All Columns ({len(all_cols)})**: {', '.join(all_cols)}\n"
 
     return (
         f"Here's what I know about your dataset:\n\n"
         f"- **Name**: {dataset}\n"
         f"- **Rows**: {rows}\n"
-        f"- **Columns**: {cols}\n"
+        f"- **Total Columns**: {cols}\n"
+        + col_line +
         f"- **Target Column**: {target}\n"
         f"- **Problem Type**: {ptype}\n\n"
         f"This information was recorded during your last training run."
     )
+
+
+def _respond_columns(records: list[dict], question: str) -> str:
+    """Handles all column-listing questions: all columns, useless/dropped columns."""
+    if not records:
+        return (
+            "I don't have any column information yet. "
+            "Please upload a dataset and train a model first!"
+        )
+
+    r = records[-1]
+    all_cols = r.get("all_columns", [])
+    dropped_cols = r.get("dropped_columns", [])
+    dataset = r.get("dataset_name", "your dataset")
+    target = r.get("target", "unknown")
+    q_lower = question.lower()
+
+    is_dropped_question = any(kw in q_lower for kw in [
+        "useless", "dropped", "removed", "irrelevant", "not important",
+        "useless features",
+    ])
+
+    if is_dropped_question:
+        if not dropped_cols:
+            return (
+                f"For **{dataset}**, **no columns were dropped** during preprocessing! "
+                f"All {len(all_cols)} columns had sufficient variance and were kept.\n\n"
+                f"The model trained on all feature columns (excluding the target `{target}`)."
+            )
+        lines = [
+            f"For **{dataset}**, **{len(dropped_cols)} column(s) were dropped** as useless:\n"
+        ]
+        for i, col in enumerate(dropped_cols, 1):
+            lines.append(f"{i}. `{col}`")
+        lines.append(
+            f"\n**Why were they dropped?**\n"
+            f"- **Constant columns** – same value in every row (zero variance)\n"
+            f"- **High-cardinality IDs** – nearly every row had a unique value (e.g. name/ID fields)\n\n"
+            f"The remaining {len(all_cols) - len(dropped_cols)} columns were used for training."
+        )
+        return "\n".join(lines)
+
+    if not all_cols:
+        return (
+            f"I know **{dataset}** has columns but the full list wasn't saved in this session. "
+            f"Please retrain the model to capture detailed column info."
+        )
+
+    feature_cols = [c for c in all_cols if c != target]
+    lines = [
+        f"**{dataset}** has **{len(all_cols)} total columns**:\n",
+        f"🎯 **Target Column**: `{target}`\n",
+        f"📊 **Feature Columns ({len(feature_cols)})**:",
+    ]
+    for i, col in enumerate(feature_cols, 1):
+        lines.append(f"  {i}. `{col}`")
+
+    if dropped_cols:
+        lines.append(
+            f"\n🗑️ **Dropped/Useless Columns ({len(dropped_cols)})**: "
+            + ", ".join(f"`{c}`" for c in dropped_cols)
+        )
+    else:
+        lines.append(f"\n✅ **No columns were dropped** — all features were used for training.")
+
+    return "\n".join(lines)
 
 
 def _respond_improvement(records: list[dict]) -> str:
@@ -454,6 +547,7 @@ _INTENT_HANDLERS = {
     "greeting": _respond_greeting,
     "accuracy": _respond_accuracy,
     "model_info": _respond_model_info,
+    "columns": _respond_columns,
     "dataset_info": _respond_dataset_info,
     "improvement": _respond_improvement,
     "problem_type": _respond_problem_type,
@@ -481,8 +575,8 @@ def generate_offline_response(question: str, context: str) -> str:
 
         handler = _INTENT_HANDLERS.get(intent, _respond_general)
 
-        # Some handlers take the question as well
-        if intent in ("explain", "compare", "general"):
+        # Handlers that also need the raw question for context
+        if intent in ("explain", "compare", "general", "columns"):
             return handler(records, question)
         else:
             return handler(records)

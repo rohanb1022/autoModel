@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from rag.embedder import get_embedding
 from rag.vectordb import collection
-from rag.offline_engine import generate_offline_response
+from rag.offline_engine import generate_offline_response, _classify_intent, _parse_training_context
 
 load_dotenv()
 
@@ -148,10 +148,11 @@ def ask_ai(user_id: str, question: str) -> str:
     Main RAG entry-point called by the /chat endpoint.
 
     LLM Cascade (all FREE):
-      1. Groq         -- fast cloud LLM, free tier
-      2. HuggingFace  -- free inference API
-      3. Ollama       -- local dev only
-      4. Offline Engine -- ZERO API calls, can NEVER fail (guaranteed)
+      1. Direct Offline Lookup  -- zero API, for simple factual questions
+      2. Groq         -- fast cloud LLM, free tier
+      3. HuggingFace  -- free inference API
+      4. Ollama       -- local dev only
+      5. Offline Engine -- ZERO API calls, can NEVER fail (guaranteed)
 
     This function is guaranteed to always return a useful response.
     """
@@ -172,6 +173,23 @@ def ask_ai(user_id: str, question: str) -> str:
                 context = "\n---\n".join(docs)
     except Exception as e:
         print(f"[VectorDB] Query error (non-fatal, continuing without context): {e}")
+
+    # ------------------------------------------------------------------
+    # Step 1.5: SHORT-CIRCUIT for direct factual questions
+    # If the intent is a simple data lookup (columns, accuracy, model info),
+    # answer directly from the stored context WITHOUT any API call.
+    # This eliminates 429 risk for the most common questions.
+    # ------------------------------------------------------------------
+    DIRECT_ANSWER_INTENTS = {"columns", "accuracy", "model_info", "dataset_info", "problem_type"}
+    try:
+        intent = _classify_intent(question)
+        if intent in DIRECT_ANSWER_INTENTS and context:
+            records = _parse_training_context(context)
+            if records:
+                print(f"[CHAT] Short-circuiting LLM for direct factual intent: '{intent}'")
+                return generate_offline_response(question, context)
+    except Exception as e:
+        print(f"[CHAT] Short-circuit check failed (non-fatal): {e}")
 
     # ------------------------------------------------------------------
     # Step 2: Try the LLM cascade (Groq -> HuggingFace -> Ollama)
