@@ -23,12 +23,16 @@ __pycache__/
 .ipynb_checkpoints/
 
 # ML Artifacts — transient, should not be version-controlled
+outputs/
+backend-ml/outputs/
 outputs/*.pkl
 outputs/*.png
 outputs/*.csv
 outputs/*.joblib
 temp.csv
 temp*.csv
+backend-ml/temp.csv
+backend-ml/temp*.csv
 
 # ChromaDB vector store — contains user data, must not be committed (M2 fix)
 vector_db/
