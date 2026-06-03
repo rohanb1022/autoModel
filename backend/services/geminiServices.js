@@ -5,7 +5,7 @@ let genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 exports.getHelpFromModel = async (errorTraceback, dataSample) => {
   try {
     let model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
+      model: "gemini-3.5-flash"
     });
 
     const prompt = `
@@ -33,7 +33,7 @@ Keep the advice practical and technical.
       console.log(`Gemini API key 1 failed: ${apiErr.message}. Falling back to key 2...`);
       if (process.env.GEMINI_API_KEY_2) {
         const fallbackGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_2);
-        model = fallbackGenAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        model = fallbackGenAI.getGenerativeModel({ model: "gemini-3.5-flash" });
         result = await model.generateContent(prompt);
       } else {
         throw apiErr;

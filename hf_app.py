@@ -324,7 +324,7 @@ def generate_insights(
     if gemini_key:
         try:
             genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            model = genai.GenerativeModel("gemini-3.5-flash")
             response = model.generate_content(
                 prompt,
                 generation_config=genai.GenerationConfig(

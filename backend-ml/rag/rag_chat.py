@@ -31,7 +31,7 @@ def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY not set")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
     headers = {"Content-Type": "application/json"}
     
     payload = {
