@@ -41,12 +41,15 @@ app = FastAPI()
 # CORS — explicitly list allowed origins
 # ----------------------------------------
 _frontend_url   = os.getenv("FRONTEND_URL", "http://localhost:8080")
-_node_backend   = os.getenv("NODE_BACKEND_URL", "http://localhost:5000")
+# Default to the production Render backend so the HF space can call it even without the env var
+_node_backend   = os.getenv("NODE_BACKEND_URL", "https://automodel-backend-g5oh.onrender.com")
 
 ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:5173",
     "http://localhost:3000",
+    # Production frontend on Vercel
+    "https://auto-model-73ap.vercel.app",
     _frontend_url,
     _node_backend,
 ]
