@@ -70,8 +70,16 @@ app.set("trust proxy", 1);
 // ── Rate Limiting ───────────────────────────────────────────────────────────
 const rateLimit = require("express-rate-limit");
 
+// Helper to bypass rate limiting in development mode
+const createLimiter = (options) => {
+  if (!IS_PRODUCTION) {
+    return (req, res, next) => next();
+  }
+  return rateLimit(options);
+};
+
 // Auth: tight limit — brute-force protection
-const authLimiter = rateLimit({
+const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,   // 15 minutes
   max: 20,                      // 20 attempts per window
   message: { error: "Too many auth requests from this IP, please try again later." },
@@ -80,7 +88,7 @@ const authLimiter = rateLimit({
 });
 
 // Upload: tight limit — expensive operations
-const uploadLimiter = rateLimit({
+const uploadLimiter = createLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { error: "Upload rate limit exceeded. Please wait before uploading again." },
@@ -89,7 +97,7 @@ const uploadLimiter = rateLimit({
 });
 
 // Chat: moderate limit — LLM calls are expensive
-const chatLimiter = rateLimit({
+const chatLimiter = createLimiter({
   windowMs: 1 * 60 * 1000,    // 1 minute
   max: 30,                      // 30 chat messages per minute
   message: { error: "Chat rate limit exceeded. Please slow down." },
@@ -98,9 +106,7 @@ const chatLimiter = rateLimit({
 });
 
 // General: generous limit — covers all dashboard data-fetching endpoints
-// A SPA dashboard fires many parallel requests on page load (models, messages,
-// insights, visualizations, etc.) so this needs to be high.
-const generalLimiter = rateLimit({
+const generalLimiter = createLimiter({
   windowMs: 1 * 60 * 1000,    // 1 minute
   max: 300,                     // 300 requests per minute — generous for SPA
   standardHeaders: true,
