@@ -38,6 +38,7 @@ exports.uploadDataset = async (req, res) => {
       
       // 2. Call ML Service /analyze with dataset_id
       try {
+        console.log(`[UPLOAD] Calling ML service: ${ML_SERVICE_URL}/analyze with dataset_id=${datasetId}`);
         const response = await fetch(`${ML_SERVICE_URL}/analyze`, {
           method: "POST",
           headers: {
@@ -51,21 +52,27 @@ exports.uploadDataset = async (req, res) => {
         try {
           mlData = await response.json();
         } catch (e) {
-          throw new Error("Failed to parse ML response");
+          throw new Error(`Failed to parse ML response (HTTP ${response.status})`);
         }
 
-        if (!response.ok) {
-          throw { response: { status: response.status, data: mlData } };
+        console.log(`[UPLOAD] ML service responded with status ${response.status}:`, JSON.stringify(mlData).substring(0, 300));
+
+        // Treat both HTTP errors AND ML-level errors (200 + {error:...}) as failures
+        if (!response.ok || mlData.error) {
+          const errMsg = mlData.error || mlData.detail || "ML service error";
+          return res.status(response.ok ? 422 : response.status).json({
+            error: "ML Analysis failed.",
+            details: errMsg
+          });
         }
         
         if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath); // delete local temp file on node
+          fs.unlinkSync(filePath);
         }
         
-        // Add dataset_id to response so frontend can use it if needed
         mlData.dataset_id = datasetId;
-        
         res.json(mlData);
+
       } catch (mlError) {
         console.error("[ML ANALYZE ERROR]:", mlError.response?.data || mlError.message);
         logError("ML ANALYZE ERROR", mlError);
