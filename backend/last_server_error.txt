@@ -1,0 +1,17 @@
+2026-06-20T14:47:27.902Z
+[CONFIRM TARGET ERROR] read ECONNRESET
+Error: read ECONNRESET
+    at AxiosError.from (C:\Users\programming\machineLearning\projects-1\autoModel\backend\node_modules\axios\dist\node\axios.cjs:874:24)
+    at RedirectableRequest.handleRequestError (C:\Users\programming\machineLearning\projects-1\autoModel\backend\node_modules\axios\dist\node\axios.cjs:3299:25)
+    at RedirectableRequest.emit (node:events:518:28)
+    at eventHandlers.<computed> (C:\Users\programming\machineLearning\projects-1\autoModel\backend\node_modules\follow-redirects\index.js:49:24)
+    at ClientRequest.emit (node:events:518:28)
+    at emitErrorEvent (node:_http_client:104:11)
+    at Socket.socketErrorListener (node:_http_client:518:5)
+    at Socket.emit (node:events:518:28)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at Axios.request (C:\Users\programming\machineLearning\projects-1\autoModel\backend\node_modules\axios\dist\node\axios.cjs:4339:41)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async exports.confirmTarget (C:\Users\programming\machineLearning\projects-1\autoModel\backend\controller\confirmController.js:23:22)
+

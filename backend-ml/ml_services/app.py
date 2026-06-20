@@ -124,6 +124,10 @@ async def analyze_dataset(
         ranked = score_columns(df)
         target_column = ranked[0]["column"]
         problem_type = detect_problem_type(df[target_column])
+        
+        from src.profiler import DatasetProfiler
+        profiler = DatasetProfiler(df, target_column, problem_type)
+        profile_report = profiler.profile()
 
         # Generate EDA
         plot_target_distribution(df, target_column, problem_type)
@@ -140,6 +144,7 @@ async def analyze_dataset(
             "suggested_target": target_column,
             "problem_type": problem_type,
             "ranked_suggestions": ranked[:5],
+            "profile_report": profile_report,
             "message": "Dataset analyzed successfully. Please confirm target column."
         }
 
@@ -194,12 +199,16 @@ async def confirm_target(
 
             if not pd.api.types.is_numeric_dtype(y):
                 if unique_ratio > 0.5:
-                    # To prevent errors for high-cardinality strings, we fallback to regression (which will fail upstream if string, but handles high cardinality numbers masquerading as strings)
                     problem_type = "regression" 
                 else:
                     problem_type = "classification"
             else:
                 problem_type = detect_problem_type(y)
+
+        # Profile the dataset to generate a quality report
+        from src.profiler import DatasetProfiler
+        profiler = DatasetProfiler(df, target_column, problem_type)
+        profile_report = profiler.profile()
 
         import traceback
         from src.auto_healer import auto_heal_dataset
@@ -207,11 +216,13 @@ async def confirm_target(
         system_messages = []
         best_model_name = None
         best_score = None
+        leaderboard = []
+        optuna_results = {}
 
         try:
             # First attempt
             X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
-            best_model_name, best_score, top_features = train_models(X_train, X_test, y_train, y_test, problem_type)
+            best_model_name, best_score, top_features, leaderboard, optuna_results = train_models(X_train, X_test, y_train, y_test, problem_type)
         except Exception as first_error:
             # We hit an error! Kick in the Auto-Healer.
             traceback_str = traceback.format_exc()
@@ -233,9 +244,13 @@ async def confirm_target(
                     "llmCode": generated_code
                 })
                 
+                # Update profiling report with healed dataset
+                profiler = DatasetProfiler(df, target_column, problem_type)
+                profile_report = profiler.profile()
+                
                 # Second attempt
                 X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
-                best_model_name, best_score, top_features = train_models(X_train, X_test, y_train, y_test, problem_type)
+                best_model_name, best_score, top_features, leaderboard, optuna_results = train_models(X_train, X_test, y_train, y_test, problem_type)
 
                 system_messages.append({
                     "type": "success",
@@ -254,6 +269,15 @@ async def confirm_target(
                     "system_messages": system_messages,
                     "details": str(second_error)
                 }
+
+        from src.explainability import ModelExplainer
+        import joblib
+        try:
+            best_model_obj = joblib.load("outputs/best_model.pkl")
+            explainer = ModelExplainer(best_model_obj, X_train)
+            explain_report = explainer.explain()
+        except Exception as e:
+            explain_report = {"status": "error", "message": f"Explanation failed: {str(e)}"}
 
         # Store training memory in the background (for RAG/chatbot)
         background_tasks.add_task(
@@ -283,7 +307,11 @@ async def confirm_target(
             "score": round(best_score, 4),
             "rows": df.shape[0],
             "columns": df.shape[1],
-            "system_messages": system_messages
+            "system_messages": system_messages,
+            "explain_report": explain_report,
+            "leaderboard": leaderboard,
+            "optuna_results": optuna_results,
+            "profile_report": profile_report
         }
 
     except Exception as e:
@@ -296,11 +324,17 @@ async def confirm_target(
 # ----------------------------------------
 # AI INSIGHTS
 # ----------------------------------------
+from typing import Optional, List, Dict, Any
+
 class InsightRequest(BaseModel):
     datasetName: str
     problemType: str
     bestModel: str
     accuracy: float
+    datasetQualityReport: Optional[Dict[str, Any]] = None
+    leaderboard: Optional[List[Dict[str, Any]]] = None
+    bestHyperparameters: Optional[Dict[str, Any]] = None
+    featureImportance: Optional[List[Dict[str, Any]]] = None
 
 @app.post("/generate-insights")
 def generate_insights(
@@ -312,17 +346,37 @@ def generate_insights(
     metric_name = "Silhouette Score" if request.problemType == "clustering" else "Accuracy"
     metric_value = f"{request.accuracy:.3f}" if request.problemType == "clustering" else f"{request.accuracy * 100:.1f}%"
 
+    quality_report_str = "N/A"
+    if request.datasetQualityReport:
+        q = request.datasetQualityReport
+        quality_report_str = f"Rows: {q.get('rows')}, Columns: {q.get('columns')}, Duplicates: {q.get('duplicates')}, Missing values: {q.get('missing_values')}, Warnings: {q.get('warnings')}"
+
+    leaderboard_str = "N/A"
+    if request.leaderboard:
+        leaderboard_str = ", ".join([f"{item.get('model')}: {item.get('score'):.4f}" for item in request.leaderboard])
+
+    best_hyperparameters_str = "N/A"
+    if request.bestHyperparameters:
+        best_hyperparameters_str = str(request.bestHyperparameters)
+
+    feature_importance_str = "N/A"
+    if request.featureImportance:
+        feature_importance_str = ", ".join([f"{item.get('feature')}: {item.get('importance'):.4f}" for item in request.featureImportance])
+
     prompt = (
-        f"You are an expert AI data scientist. Analyze the following ML training result "
-        f"and provide exactly 3 concise, actionable bullet points formatted in markdown.\n\n"
+        f"You are an expert AI data scientist. Analyze the following ML training result and dataset profiling report, "
+        f"and provide a set of natural-language insights formatted in markdown. The insights must cover:\n"
+        f"1. Most influential features (refer to the Feature Importance: {feature_importance_str})\n"
+        f"2. Potential data quality issues (refer to the Dataset Quality Report: {quality_report_str})\n"
+        f"3. Best-performing model details and leaderboard performance assessment (refer to: {request.bestModel} and leaderboard: {leaderboard_str})\n"
+        f"4. Concrete next steps to improve model performance\n"
+        f"5. Observations about the dataset characteristics (rows/columns/warnings)\n\n"
         f"Dataset: {request.datasetName}\n"
         f"Problem Type: {request.problemType}\n"
         f"Best Model: {request.bestModel}\n"
-        f"{metric_name}: {metric_value}\n\n"
-        f"Provide 3 bullet points covering:\n"
-        f"1. Model performance assessment — is this score good or poor for this problem type?\n"
-        f"2. What this score means in practice for the end user.\n"
-        f"3. One concrete next step to meaningfully improve results."
+        f"{metric_name}: {metric_value}\n"
+        f"Best Hyperparameters: {best_hyperparameters_str}\n\n"
+        f"Provide 4-5 direct, actionable bullet points formatted in clean markdown. Output should be easy to read for a business stakeholder."
     )
 
     gemini_key = os.getenv("GEMINI_API_KEY")
@@ -334,7 +388,7 @@ def generate_insights(
                 prompt,
                 generation_config=genai.GenerationConfig(
                     temperature=0.3,
-                    max_output_tokens=512,
+                    max_output_tokens=768,
                 )
             )
             if response.text:
@@ -342,24 +396,40 @@ def generate_insights(
         except Exception as e:
             print(f"[INSIGHTS] Gemini error: {e}")
 
-    # Static fallback — always works, no external dependency
-    if request.problemType == "clustering":
-        insights = (
-            f"- **Performance**: Your **{request.bestModel}** achieved a Silhouette Score of **{request.accuracy:.3f}** "
-            f"on a clustering task.\n"
-            f"- **Interpretation**: The silhouette score measures the separation distance between clusters, ranging from -1 to 1.\n"
-            f"- **Next step**: Try adjusting the number of clusters or testing different scaling methods to optimize the spacing."
-        )
-    else:
-        insights = (
-            f"- **Performance**: Your **{request.bestModel}** achieved **{request.accuracy*100:.1f}%** accuracy "
-            f"on a {request.problemType} task — a solid baseline result.\n"
-            f"- **Interpretation**: For {request.problemType}, this score indicates the model generalises "
-            f"reasonably well.\n"
-            f"- **Next step**: Try hyperparameter tuning or feature engineering to push "
-            f"accuracy higher before moving to production."
-        )
-    return {"insights": insights}
+    # Dynamic fallback — always works, no external dependency
+    fallback_insights = f"### AI Insights Summary\n\n"
+    
+    # 1. Best model & leaderboard
+    fallback_insights += f"- **Best Model Performance**: The AutoML competition selected **{request.bestModel}** as the top performer with a baseline {metric_name} of **{metric_value}**.\n"
+    if request.leaderboard and len(request.leaderboard) > 1:
+        leaderboard_list = ", ".join([f"{item.get('model')} ({item.get('score'):.3f})" for item in request.leaderboard[:3]])
+        fallback_insights += f"  - **Competition Leaderboard**: Tested models include: {leaderboard_list}.\n"
+        
+    # 2. Features
+    if request.featureImportance:
+        top_feats = request.featureImportance[:3]
+        feat_list = ", ".join([f"**{item.get('feature')}** ({item.get('importance')*100:.1f}%)" for item in top_feats])
+        fallback_insights += f"- **Most Influential Features**: The top predictors determining predictions are: {feat_list}.\n"
+        
+    # 3. Quality report
+    if request.datasetQualityReport:
+        q = request.datasetQualityReport
+        fallback_insights += f"- **Dataset Characteristics**: Analyzed dataset **{request.datasetName}** containing **{q.get('rows')}** rows and **{q.get('columns')}** columns.\n"
+        
+        warnings_list = q.get('warnings', [])
+        if warnings_list:
+            fallback_insights += "- **Data Quality Warnings & Issues**:\n"
+            for warning in warnings_list[:3]:
+                fallback_insights += f"  - {warning}\n"
+    
+    # 4. Hyperparameters
+    if request.bestHyperparameters and len(request.bestHyperparameters) > 0:
+        fallback_insights += f"- **Best Hyperparameters**: Optuna successfully tuned: `{request.bestHyperparameters}`.\n"
+        
+    # 5. Recommendations
+    fallback_insights += f"- **Business Recommendations**: Address any active data quality warnings, double down on engineering features derived from **{request.featureImportance[0].get('feature') if request.featureImportance else 'the top predictor'}**, and proceed to generate the inference code for model deployment."
+
+    return {"insights": fallback_insights}
 
 
 # ----------------------------------------

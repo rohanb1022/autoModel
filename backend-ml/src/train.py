@@ -1,7 +1,9 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.compose import TransformedTargetRegressor
+from sklearn.dummy import DummyRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.neural_network import MLPClassifier, MLPRegressor
@@ -9,7 +11,17 @@ from sklearn.svm import SVC, SVR
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics import accuracy_score, r2_score, silhouette_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    r2_score,
+    mean_absolute_error,
+    mean_squared_error,
+    silhouette_score
+)
+import numpy as np
 import joblib
 
 def prepare_data(df, target_column, max_rows=10000, max_categories=50):
@@ -31,13 +43,24 @@ def prepare_data(df, target_column, max_rows=10000, max_categories=50):
     # 2. Find constant columns
     constant_cols = [col for col in X.columns if X[col].nunique() <= 1]
     
-    # 3. Drop high-cardinality categorical columns to prevent feature explosion
+    # 3. Find ID-like columns (both categorical and numeric) to prevent overfitting on serials/keys
+    id_cols = []
+    for col in X.columns:
+        col_lower = col.lower()
+        is_id_name = any(pattern in col_lower for pattern in ['id', 'key', 'index', 'pk', 'unnamed', 'serial'])
+        is_unique_int = False
+        if pd.api.types.is_integer_dtype(X[col]) and X[col].nunique() == len(X):
+            is_unique_int = True
+        if is_id_name or is_unique_int:
+            id_cols.append(col)
+            
+    # 4. Drop high-cardinality categorical columns to prevent feature explosion
     categorical_cols = X.select_dtypes(include=['object', 'category']).columns
     high_card_cols = [col for col in categorical_cols if X[col].nunique() > max_categories]
     
-    cols_to_drop = list(set(constant_cols + high_card_cols))
+    cols_to_drop = list(set(constant_cols + id_cols + high_card_cols))
     if cols_to_drop:
-        print(f"Dropping high-cardinality columns: {cols_to_drop}")
+        print(f"Dropping constant/ID/high-cardinality columns: {cols_to_drop}")
         X = X.drop(columns=cols_to_drop)
 
     # convert categorical to numeric
@@ -81,58 +104,111 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
 
     results = {}
     trained_models = {}
+    all_metrics = {}
+    optuna_results = {
+        "run": False,
+        "best_params": {},
+        "best_score": 0.0,
+        "n_trials": 0
+    }
 
-    if problem_type == "classification":
+    from src.automl.models import get_models
+    from src.automl.optimizer import AutoMLOptimizer
 
-        models = {
-            "Logistic Regression": LogisticRegression(max_iter=1000, n_jobs=2),
-            "Random Forest": RandomForestClassifier(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
-            "Decision Tree": DecisionTreeClassifier(max_depth=15, random_state=42),
-            "Support Vector Machine": SVC(probability=True, random_state=42),
-            "K-Nearest Neighbors": KNeighborsClassifier(n_neighbors=5, n_jobs=2),
-            "Artificial Neural Network": MLPClassifier(max_iter=500, random_state=42)
-        }
+    if problem_type in ["classification", "regression"]:
+        models = get_models(problem_type)
 
         for name, model in models.items():
-            model.fit(X_train, y_train)
-            preds = model.predict(X_test)
-            acc = accuracy_score(y_test, preds)
+            try:
+                model.fit(X_train, y_train)
+                preds = model.predict(X_test)
+                if problem_type == "classification":
+                    acc = accuracy_score(y_test, preds)
+                    prec = precision_score(y_test, preds, average="weighted", zero_division=0)
+                    rec = recall_score(y_test, preds, average="weighted", zero_division=0)
+                    f1 = f1_score(y_test, preds, average="weighted", zero_division=0)
+                    
+                    results[name] = acc
+                    all_metrics[name] = {
+                        "accuracy": float(acc),
+                        "precision": float(prec),
+                        "recall": float(rec),
+                        "f1": float(f1)
+                    }
+                    print(f"{name} base score (accuracy): {acc:.4f}")
+                else:
+                    r2 = r2_score(y_test, preds)
+                    mae = mean_absolute_error(y_test, preds)
+                    mse = mean_squared_error(y_test, preds)
+                    rmse = float(np.sqrt(mse))
+                    
+                    results[name] = r2
+                    all_metrics[name] = {
+                        "r2": float(r2),
+                        "mae": float(mae),
+                        "rmse": rmse
+                    }
+                    print(f"{name} base score (R2): {r2:.4f}")
+                    
+                trained_models[name] = model
+            except Exception as e:
+                print(f"{name} failed to train: {e}")
 
-            results[name] = acc
-            trained_models[name] = model
-
-            print(f"{name} accuracy: {acc:.4f}")
+        if not results:
+            raise ValueError("No models succeeded in training.")
 
         best_model_name = max(results, key=results.get)
         best_model = trained_models[best_model_name]
+        best_score = results[best_model_name]
 
-        print(f"\nBest model: {best_model_name}")
+        print(f"\nBest base model: {best_model_name}")
+        
+        # Hyperparameter optimization using Optuna (n_trials=10)
+        print(f"Starting Optuna hyperparameter optimization for {best_model_name}...")
+        optimizer = AutoMLOptimizer(X_train, y_train, problem_type)
+        opt_score, opt_model = optimizer.optimize_model(best_model_name, n_trials=10)
+        
+        if opt_model is not None and opt_score > best_score:
+            print(f"Optuna CV score ({opt_score:.4f}) > base test score ({best_score:.4f}). Adopting optimized model.")
+            opt_model.fit(X_train, y_train)
+            preds = opt_model.predict(X_test)
+            if problem_type == "classification":
+                final_score = accuracy_score(y_test, preds)
+                prec = precision_score(y_test, preds, average="weighted", zero_division=0)
+                rec = recall_score(y_test, preds, average="weighted", zero_division=0)
+                f1 = f1_score(y_test, preds, average="weighted", zero_division=0)
+                
+                results[best_model_name] = final_score
+                all_metrics[best_model_name] = {
+                    "accuracy": float(final_score),
+                    "precision": float(prec),
+                    "recall": float(rec),
+                    "f1": float(f1)
+                }
+            else:
+                final_score = r2_score(y_test, preds)
+                mae = mean_absolute_error(y_test, preds)
+                mse = mean_squared_error(y_test, preds)
+                rmse = float(np.sqrt(mse))
+                
+                results[best_model_name] = final_score
+                all_metrics[best_model_name] = {
+                    "r2": float(final_score),
+                    "mae": float(mae),
+                    "rmse": rmse
+                }
+                
+            best_model = opt_model
+            print(f"Final Optimized Test Score: {final_score:.4f}")
+        else:
+            print(f"Optuna did not improve the model. Keeping base model.")
 
-    elif problem_type == "regression":
-
-        models = {
-            "Linear Regression": LinearRegression(n_jobs=2),
-            "Random Forest": RandomForestRegressor(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
-            "Decision Tree": DecisionTreeRegressor(max_depth=15, random_state=42),
-            "Support Vector Machine": SVR(),
-            "K-Nearest Neighbors": KNeighborsRegressor(n_neighbors=5, n_jobs=2),
-            "Artificial Neural Network": MLPRegressor(max_iter=500, random_state=42)
+        optuna_results = {
+            "run": True,
+            "best_params": optimizer.best_params,
+            "best_score": float(opt_score) if opt_score is not None else 0.0,
+            "n_trials": 10
         }
-
-        for name, model in models.items():
-            model.fit(X_train, y_train)
-            preds = model.predict(X_test)
-            score = r2_score(y_test, preds)
-
-            results[name] = score
-            trained_models[name] = model
-
-            print(f"{name} R2 score: {score:.4f}")
-
-        best_model_name = max(results, key=results.get)
-        best_model = trained_models[best_model_name]
-
-        print(f"\nBest model: {best_model_name}")
 
     elif problem_type == "clustering":
 
@@ -144,22 +220,30 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
         }
 
         for name, model in models.items():
-            model.fit(X_train)
-            if hasattr(model, "predict"):
-                preds = model.predict(X_test)
-            else:
-                preds = model.fit_predict(X_test)
+            try:
+                model.fit(X_train)
+                if hasattr(model, "predict"):
+                    preds = model.predict(X_test)
+                else:
+                    preds = model.fit_predict(X_test)
 
-            import numpy as np
-            if len(np.unique(preds)) > 1:
-                score = silhouette_score(X_test, preds)
-            else:
-                score = -1.0
+                if len(np.unique(preds)) > 1:
+                    score = silhouette_score(X_test, preds)
+                else:
+                    score = -1.0
 
-            results[name] = score
-            trained_models[name] = model
+                results[name] = score
+                trained_models[name] = model
+                all_metrics[name] = {
+                    "silhouette": float(score)
+                }
 
-            print(f"{name} Silhouette score: {score:.4f}")
+                print(f"{name} Silhouette score: {score:.4f}")
+            except Exception as e:
+                print(f"{name} failed in clustering: {e}")
+
+        if not results:
+            raise ValueError("No clustering models succeeded.")
 
         best_model_name = max(results, key=results.get)
         best_model = trained_models[best_model_name]
@@ -171,11 +255,23 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
     print("Best model saved to outputs/best_model.pkl")
 
     best_score = results[best_model_name]
+    if problem_type == "regression" and best_score < 0.0:
+        best_score = 0.0
     
     # Extract top feature importances
     top_features = get_top_features(best_model, X_train.columns)
 
-    return best_model_name, best_score, top_features
+    # Construct sorted leaderboard
+    leaderboard = []
+    for name in sorted(results, key=results.get, reverse=True):
+        leaderboard.append({
+            "model": name,
+            "score": float(results[name]),
+            "metrics": all_metrics.get(name, {})
+        })
+
+    return best_model_name, best_score, top_features, leaderboard, optuna_results
+
 
 
 def get_top_features(model, feature_names, top_n=5):
@@ -185,6 +281,8 @@ def get_top_features(model, feature_names, top_n=5):
     """
     import numpy as np
     try:
+        if hasattr(model, "regressor_"):
+            model = model.regressor_
         if hasattr(model, "feature_importances_"):
             importances = model.feature_importances_
         elif hasattr(model, "coef_"):

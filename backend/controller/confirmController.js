@@ -60,6 +60,11 @@ exports.confirmTarget = async (req, res) => {
       accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0),
       rows: data.rows,
       columns: data.columns,
+      leaderboard: data.leaderboard || [],
+      profileReport: data.profile_report || null,
+      optunaResults: data.optuna_results || null,
+      explainReport: data.explain_report || null,
+      topFeatures: data.explain_report?.top_features || [],
       insights: "• Insights are being generated. Check back in a moment.",
     });
 
@@ -77,7 +82,11 @@ exports.confirmTarget = async (req, res) => {
             datasetName: dataset_name || data.dataset_name,
             problemType: data.problem_type,
             bestModel: data.best_model,
-            accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0)
+            accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0),
+            datasetQualityReport: data.profile_report || null,
+            leaderboard: data.leaderboard || [],
+            bestHyperparameters: data.optuna_results?.best_params || {},
+            featureImportance: data.explain_report?.top_features || []
           },
           { headers: { Authorization: token } }
         );

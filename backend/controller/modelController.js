@@ -45,6 +45,8 @@ const saveModelRun = async (req, res) => {
       accuracy: parseFloat(accuracy) || 0,
       rows: parseInt(rows) || 0,
       columns: parseInt(columns) || 0,
+      topFeatures: req.body.topFeatures || [],
+      explainReport: req.body.explainReport || null,
       insights: finalInsights
     });
 

@@ -25,7 +25,7 @@ def main():
         plot_correlation_heatmap(df)
         plot_feature_distributions(df)
         X_train, X_test, y_train, y_test, dropped_cols = prepare_data(df, target_column)
-        best_model_name, best_score, top_features = train_models(X_train, X_test, y_train, y_test, problem_type)
+        best_model_name, best_score, top_features, leaderboard, optuna_results = train_models(X_train, X_test, y_train, y_test, problem_type)
         print("\nBest model:", best_model_name)
         print("Best score:", best_score)
         print("Top features:", top_features)

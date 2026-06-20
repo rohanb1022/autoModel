@@ -14,6 +14,11 @@ const modelRunSchema = new mongoose.Schema({
   accuracy: Number,
   rows: Number,
   columns: Number,
+  topFeatures: Array,
+  explainReport: Object,
+  leaderboard: Array,
+  profileReport: Object,
+  optunaResults: Object,
 
   insights: {
     type: String,
