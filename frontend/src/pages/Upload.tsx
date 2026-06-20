@@ -293,12 +293,13 @@ export default function Upload() {
                         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 items-end">
                           <div className="flex-1 w-full space-y-2">
                             <label className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-widest">Select Target Column</label>
-                            <select
+                             <select
                               value={selectedTarget}
                               onChange={(e) => setSelectedTarget(e.target.value)}
                               className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 md:p-4 text-slate-900 font-bold focus:ring-2 focus:ring-[#4b41e1]/30 focus:border-[#4b41e1] outline-none appearance-none text-sm md:text-base shadow-sm"
                             >
                               <option value="">Choose a column...</option>
+                              <option value="__clustering__">None — Unsupervised Clustering</option>
                               {analysis.all_columns.map((col: string) => (
                                 <option key={col} value={col}>{col}</option>
                               ))}
@@ -347,8 +348,18 @@ export default function Upload() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full max-w-2xl">
                     {[
                       { label: "Best Model", value: trainingResult.best_model, icon: Cpu },
-                      { label: "Accuracy", value: (trainingResult.score * 100).toFixed(1) + "%", icon: Zap },
-                      { label: "Target", value: trainingResult.target_column, icon: Terminal },
+                      { 
+                        label: trainingResult.problem_type === "clustering" ? "Silhouette" : "Accuracy", 
+                        value: trainingResult.problem_type === "clustering" 
+                          ? (parseFloat(trainingResult.score) || 0).toFixed(3) 
+                          : ((parseFloat(trainingResult.score) || 0) * 100).toFixed(1) + "%", 
+                        icon: Zap 
+                      },
+                      { 
+                        label: "Target", 
+                        value: trainingResult.target_column === "__clustering__" ? "None (Clustering)" : trainingResult.target_column, 
+                        icon: Terminal 
+                      },
                       { label: "Type", value: trainingResult.problem_type, icon: LayoutDashboard },
                     ].map((stat, i) => (
                       <motion.div

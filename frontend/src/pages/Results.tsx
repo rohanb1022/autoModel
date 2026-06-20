@@ -196,9 +196,18 @@ export default function Results() {
             </div>
 
             <div className="text-center bg-slate-50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none w-full md:w-auto border border-slate-100 md:border-none">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Accuracy Score</p>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
+                {latestModel.problemType === "clustering" ? "Silhouette Score" : "Accuracy Score"}
+              </p>
               <div className="text-4xl md:text-5xl font-black text-[#00000b] tracking-tighter">
-                {(latestModel.accuracy * 100).toFixed(1)}<span className="text-[#4b41e1] text-2xl md:text-3xl">%</span>
+                {latestModel.problemType === "clustering" ? (
+                  latestModel.accuracy.toFixed(3)
+                ) : (
+                  <>
+                    {(latestModel.accuracy * 100).toFixed(1)}
+                    <span className="text-[#4b41e1] text-2xl md:text-3xl">%</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

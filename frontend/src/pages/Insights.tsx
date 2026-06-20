@@ -110,7 +110,13 @@ export default function Insights() {
                     { label: "Dataset", value: latestModel.datasetName, icon: Database },
                     { label: "Pipeline", value: latestModel.problemType, icon: Target },
                     { label: "Engine", value: latestModel.bestModel, icon: Cpu },
-                    { label: "Accuracy", value: (latestModel.accuracy * 100).toFixed(1) + "%", icon: Zap },
+                    { 
+                      label: latestModel.problemType === "clustering" ? "Silhouette" : "Accuracy", 
+                      value: latestModel.problemType === "clustering" 
+                        ? (parseFloat(latestModel.accuracy) || 0).toFixed(3) 
+                        : ((parseFloat(latestModel.accuracy) || 0) * 100).toFixed(1) + "%", 
+                      icon: Zap 
+                    },
                   ].map((item) => (
                     <div key={item.label} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-[#4b41e1]/30 transition-colors overflow-hidden shadow-sm">
                       <item.icon className="h-4 w-4 text-slate-400 mt-1 shrink-0" />

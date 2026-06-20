@@ -93,7 +93,7 @@ export default function Dashboard() {
 
               <div>
                 <span className="bg-[#4b41e1]/10 text-[#4b41e1] text-[10px] md:text-xs font-black px-3 md:px-4 py-1.5 rounded-full border border-[#4b41e1]/20 uppercase tracking-[0.2em]">
-                  Top Performance
+                  {best && best.problemType === "clustering" ? "Top Silhouette" : "Top Performance"}
                 </span>
                 <h2 className="text-2xl md:text-4xl font-black text-[#00000b] mt-6 truncate tracking-tight">{best ? best.datasetName : "No Data"}</h2>
                 <p className="text-slate-500 mt-2 text-xs md:text-sm font-medium">Based on latest validation set</p>
@@ -101,10 +101,18 @@ export default function Dashboard() {
 
               <div className="mt-8 md:mt-12 group-hover:scale-[1.02] transition-transform origin-bottom-left duration-500">
                 <div className="flex items-end gap-1 md:gap-2">
-                  <span className="text-7xl md:text-[8rem] font-black text-[#00000b] leading-none tracking-tighter">
-                    {best ? (best.accuracy * 100).toFixed(1) : "00"}
-                  </span>
-                  <span className="text-2xl md:text-4xl font-bold text-[#4b41e1] mb-2 md:mb-5">%</span>
+                  {best && best.problemType === "clustering" ? (
+                    <span className="text-7xl md:text-[8rem] font-black text-[#00000b] leading-none tracking-tighter">
+                      {best.accuracy.toFixed(3)}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-7xl md:text-[8rem] font-black text-[#00000b] leading-none tracking-tighter">
+                        {best ? (best.accuracy * 100).toFixed(1) : "00"}
+                      </span>
+                      <span className="text-2xl md:text-4xl font-bold text-[#4b41e1] mb-2 md:mb-5">%</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -33,32 +33,6 @@ exports.confirmTarget = async (req, res) => {
     const data = response.data;
     console.log("[BACKEND] ML Service Response Data:", data);
 
-    // Generate AI Insights from the Local ML Service (saves Gemini tokens)
-    let insights = "Model trained successfully";
-    try {
-      const insightUrl = `${ML_SERVICE_URL}/generate-insights`;
-      console.log("[BACKEND-DEBUG] Requesting local insight generation for:", dataset_name || data.dataset_name, "at URL:", insightUrl);
-      
-      const insightResponse = await axios.post(
-        insightUrl,
-        {
-          datasetName: dataset_name || data.dataset_name,
-          problemType: data.problem_type,
-          bestModel: data.best_model,
-          accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0)
-        },
-        { headers: { Authorization: token } }
-      );
-      
-      if (insightResponse.data && insightResponse.data.insights) {
-        insights = insightResponse.data.insights;
-      }
-      
-      console.log("[BACKEND-DEBUG] Insights generated successfully via Ollama:", insights.substring(0, 50) + "...");
-    } catch (genError) {
-      console.error("[BACKEND-ERROR] Local Insight generation failed:", genError.message);
-    }
-
     // Process Auto-Heal System Messages
     const system_messages = data.system_messages || [];
     const savedMessages = [];
@@ -76,7 +50,7 @@ exports.confirmTarget = async (req, res) => {
        savedMessages.push(newMsg._id);
     }
 
-    // Save model run to MongoDB
+    // Save model run to MongoDB with a placeholder insight initially
     const newRun = await ModelRun.create({
       userId: req.user._id, // from protect middleware
       datasetName: dataset_name || data.dataset_name || "uploaded_dataset.csv",
@@ -86,10 +60,40 @@ exports.confirmTarget = async (req, res) => {
       accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0),
       rows: data.rows,
       columns: data.columns,
-      insights: insights,
+      insights: "• Insights are being generated. Check back in a moment.",
     });
 
     console.log("[BACKEND] Saved ModelRun with ID:", newRun._id, "Accuracy:", newRun.accuracy, "Rows:", newRun.rows);
+
+    // Asynchronously generate AI Insights in the background to avoid blocking the response
+    (async () => {
+      try {
+        const insightUrl = `${ML_SERVICE_URL}/generate-insights`;
+        console.log("[BACKEND-DEBUG] Background requesting local insight generation for:", dataset_name || data.dataset_name, "at URL:", insightUrl);
+        
+        const insightResponse = await axios.post(
+          insightUrl,
+          {
+            datasetName: dataset_name || data.dataset_name,
+            problemType: data.problem_type,
+            bestModel: data.best_model,
+            accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0)
+          },
+          { headers: { Authorization: token } }
+        );
+        
+        let backgroundInsights = "Model trained successfully";
+        if (insightResponse.data && insightResponse.data.insights) {
+          backgroundInsights = insightResponse.data.insights;
+        }
+        
+        await ModelRun.findByIdAndUpdate(newRun._id, { insights: backgroundInsights });
+        console.log("[BACKEND-DEBUG] Insights generated in background and updated for ModelRun:", newRun._id);
+      } catch (genError) {
+        console.error("[BACKEND-ERROR] Background Local Insight generation failed:", genError.message);
+        await ModelRun.findByIdAndUpdate(newRun._id, { insights: "• Insights generation failed. Please try saving again or check server logs." });
+      }
+    })();
 
     res.json({
       ...data,

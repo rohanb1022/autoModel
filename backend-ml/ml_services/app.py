@@ -4,7 +4,7 @@ import uvicorn
 import pandas as pd
 import io
 import requests as http_requests
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -13,7 +13,7 @@ from src.score_columns import score_columns, detect_problem_type
 load_dotenv()
 
 from src.data_cleaning import basic_cleaning
-from src.eda import analyze_target_column, plot_target_distribution, plot_correlation_heatmap, plot_feature_distributions
+from src.eda import analyze_target_column, plot_target_distribution, plot_correlation_heatmap, plot_feature_distributions, plot_missing_values, plot_outliers_boxplot
 from src.train import prepare_data, train_models
 from rag.store_training_memory import store_training_memory
 from rag.rag_chat import ask_ai
@@ -129,6 +129,8 @@ async def analyze_dataset(
         plot_target_distribution(df, target_column, problem_type)
         plot_correlation_heatmap(df)
         plot_feature_distributions(df)
+        plot_missing_values(df)
+        plot_outliers_boxplot(df)
 
         return {
             "dataset_name": data.dataset_name,
@@ -155,6 +157,7 @@ async def analyze_dataset(
 async def confirm_target(
     data: ConfirmTargetRequest,
     req: Request,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     try:
@@ -173,27 +176,30 @@ async def confirm_target(
         df = pd.read_csv(io.BytesIO(resp.content))
         df = basic_cleaning(df)
 
-        if target_column not in df.columns:
-            return {"error": "Invalid target column selected."}
-
-        y = df[target_column]
-
-        if y.nunique() < 2:
-            return {"error": "Target must contain at least 2 unique values."}
-
-        # Detect problem type
-        unique_values = y.nunique()
-        total_rows = len(df)
-        unique_ratio = unique_values / total_rows
-
-        if not pd.api.types.is_numeric_dtype(y):
-            if unique_ratio > 0.5:
-                # To prevent errors for high-cardinality strings, we fallback to regression (which will fail upstream if string, but handles high cardinality numbers masquerading as strings)
-                problem_type = "regression" 
-            else:
-                problem_type = "classification"
+        if target_column == "__clustering__":
+            problem_type = "clustering"
         else:
-            problem_type = detect_problem_type(y)
+            if target_column not in df.columns:
+                return {"error": "Invalid target column selected."}
+
+            y = df[target_column]
+
+            if y.nunique() < 2:
+                return {"error": "Target must contain at least 2 unique values."}
+
+            # Detect problem type
+            unique_values = y.nunique()
+            total_rows = len(df)
+            unique_ratio = unique_values / total_rows
+
+            if not pd.api.types.is_numeric_dtype(y):
+                if unique_ratio > 0.5:
+                    # To prevent errors for high-cardinality strings, we fallback to regression (which will fail upstream if string, but handles high cardinality numbers masquerading as strings)
+                    problem_type = "regression" 
+                else:
+                    problem_type = "classification"
+            else:
+                problem_type = detect_problem_type(y)
 
         import traceback
         from src.auto_healer import auto_heal_dataset
@@ -249,8 +255,9 @@ async def confirm_target(
                     "details": str(second_error)
                 }
 
-        # Store training memory (for RAG/chatbot)
-        store_training_memory(
+        # Store training memory in the background (for RAG/chatbot)
+        background_tasks.add_task(
+            store_training_memory,
             current_user["id"],
             {
                 "dataset_name": dataset_name,
@@ -302,16 +309,19 @@ def generate_insights(
 ):
     import google.generativeai as genai
 
+    metric_name = "Silhouette Score" if request.problemType == "clustering" else "Accuracy"
+    metric_value = f"{request.accuracy:.3f}" if request.problemType == "clustering" else f"{request.accuracy * 100:.1f}%"
+
     prompt = (
         f"You are an expert AI data scientist. Analyze the following ML training result "
         f"and provide exactly 3 concise, actionable bullet points formatted in markdown.\n\n"
         f"Dataset: {request.datasetName}\n"
         f"Problem Type: {request.problemType}\n"
         f"Best Model: {request.bestModel}\n"
-        f"Accuracy: {request.accuracy * 100:.1f}%\n\n"
+        f"{metric_name}: {metric_value}\n\n"
         f"Provide 3 bullet points covering:\n"
-        f"1. Model performance assessment — is this accuracy good or poor for this problem type?\n"
-        f"2. What this accuracy means in practice for the end user.\n"
+        f"1. Model performance assessment — is this score good or poor for this problem type?\n"
+        f"2. What this score means in practice for the end user.\n"
         f"3. One concrete next step to meaningfully improve results."
     )
 
@@ -333,14 +343,22 @@ def generate_insights(
             print(f"[INSIGHTS] Gemini error: {e}")
 
     # Static fallback — always works, no external dependency
-    insights = (
-        f"- **Performance**: Your **{request.bestModel}** achieved **{request.accuracy*100:.1f}%** accuracy "
-        f"on a {request.problemType} task — a solid baseline result.\n"
-        f"- **Interpretation**: For {request.problemType}, this score indicates the model generalises "
-        f"reasonably well.\n"
-        f"- **Next step**: Try hyperparameter tuning or feature engineering to push "
-        f"accuracy higher before moving to production."
-    )
+    if request.problemType == "clustering":
+        insights = (
+            f"- **Performance**: Your **{request.bestModel}** achieved a Silhouette Score of **{request.accuracy:.3f}** "
+            f"on a clustering task.\n"
+            f"- **Interpretation**: The silhouette score measures the separation distance between clusters, ranging from -1 to 1.\n"
+            f"- **Next step**: Try adjusting the number of clusters or testing different scaling methods to optimize the spacing."
+        )
+    else:
+        insights = (
+            f"- **Performance**: Your **{request.bestModel}** achieved **{request.accuracy*100:.1f}%** accuracy "
+            f"on a {request.problemType} task — a solid baseline result.\n"
+            f"- **Interpretation**: For {request.problemType}, this score indicates the model generalises "
+            f"reasonably well.\n"
+            f"- **Next step**: Try hyperparameter tuning or feature engineering to push "
+            f"accuracy higher before moving to production."
+        )
     return {"insights": insights}
 
 
@@ -358,6 +376,10 @@ async def get_visualization_insights(
             return {"insight": "• Review the heatmap for high correlations (>0.8) which may indicate multicollinearity.\n• Consider removing or combining highly correlated features before training."}
         elif "target_distribution" in chart_name:
             return {"insight": "• Check if target classes are balanced — imbalanced datasets may bias the model.\n• If imbalanced, consider SMOTE oversampling or adjusting class weights."}
+        elif "missing_values" in chart_name:
+            return {"insight": "• Columns with missing values should be handled. If missingness is high (>30%), consider removing or imputing the data.\n• Target column should have 0% missing values for reliable results."}
+        elif "outliers_boxplot" in chart_name:
+            return {"insight": "• Check boxplots for outlier markers (red diamonds) beyond the whiskers.\n• High count of outliers can skew linear models; standardizing or capping outliers may help."}
         else:
             return {"insight": "• Examine this chart for outliers or unusual distributions in your features.\n• Statistical anomalies here may require additional preprocessing steps."}
 

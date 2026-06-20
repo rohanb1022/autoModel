@@ -4,7 +4,12 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from sklearn.metrics import accuracy_score, r2_score
+from sklearn.neural_network import MLPClassifier, MLPRegressor
+from sklearn.svm import SVC, SVR
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import accuracy_score, r2_score, silhouette_score
 import joblib
 
 def prepare_data(df, target_column, max_rows=10000, max_categories=50):
@@ -16,8 +21,12 @@ def prepare_data(df, target_column, max_rows=10000, max_categories=50):
         print(f"Subsampling data from {len(df)} to {max_rows} rows...")
         df = df.sample(n=max_rows, random_state=42)
 
-    X = df.drop(columns=[target_column])
-    y = df[target_column]
+    if target_column == "__clustering__":
+        X = df.copy()
+        y = None
+    else:
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
 
     # 2. Find constant columns
     constant_cols = [col for col in X.columns if X[col].nunique() <= 1]
@@ -34,9 +43,15 @@ def prepare_data(df, target_column, max_rows=10000, max_categories=50):
     # convert categorical to numeric
     X = pd.get_dummies(X, drop_first=True)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
+    if target_column == "__clustering__":
+        X_train, X_test = train_test_split(
+            X, test_size=0.2, random_state=42
+        )
+        y_train, y_test = None, None
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
 
     # Scale the features
     scaler = StandardScaler()
@@ -72,7 +87,10 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
         models = {
             "Logistic Regression": LogisticRegression(max_iter=1000, n_jobs=2),
             "Random Forest": RandomForestClassifier(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
-            "Decision Tree": DecisionTreeClassifier(max_depth=15, random_state=42)
+            "Decision Tree": DecisionTreeClassifier(max_depth=15, random_state=42),
+            "Support Vector Machine": SVC(probability=True, random_state=42),
+            "K-Nearest Neighbors": KNeighborsClassifier(n_neighbors=5, n_jobs=2),
+            "Artificial Neural Network": MLPClassifier(max_iter=500, random_state=42)
         }
 
         for name, model in models.items():
@@ -90,12 +108,15 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
 
         print(f"\nBest model: {best_model_name}")
 
-    else:
+    elif problem_type == "regression":
 
         models = {
             "Linear Regression": LinearRegression(n_jobs=2),
             "Random Forest": RandomForestRegressor(n_estimators=50, max_depth=15, random_state=42, n_jobs=2),
-            "Decision Tree": DecisionTreeRegressor(max_depth=15, random_state=42)
+            "Decision Tree": DecisionTreeRegressor(max_depth=15, random_state=42),
+            "Support Vector Machine": SVR(),
+            "K-Nearest Neighbors": KNeighborsRegressor(n_neighbors=5, n_jobs=2),
+            "Artificial Neural Network": MLPRegressor(max_iter=500, random_state=42)
         }
 
         for name, model in models.items():
@@ -107,6 +128,38 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
             trained_models[name] = model
 
             print(f"{name} R2 score: {score:.4f}")
+
+        best_model_name = max(results, key=results.get)
+        best_model = trained_models[best_model_name]
+
+        print(f"\nBest model: {best_model_name}")
+
+    elif problem_type == "clustering":
+
+        models = {
+            "K-Means (k=3)": KMeans(n_clusters=3, random_state=42, n_init=10),
+            "K-Means (k=5)": KMeans(n_clusters=5, random_state=42, n_init=10),
+            "Mini Batch K-Means": MiniBatchKMeans(n_clusters=3, random_state=42, n_init=10),
+            "Gaussian Mixture": GaussianMixture(n_components=3, random_state=42)
+        }
+
+        for name, model in models.items():
+            model.fit(X_train)
+            if hasattr(model, "predict"):
+                preds = model.predict(X_test)
+            else:
+                preds = model.fit_predict(X_test)
+
+            import numpy as np
+            if len(np.unique(preds)) > 1:
+                score = silhouette_score(X_test, preds)
+            else:
+                score = -1.0
+
+            results[name] = score
+            trained_models[name] = model
+
+            print(f"{name} Silhouette score: {score:.4f}")
 
         best_model_name = max(results, key=results.get)
         best_model = trained_models[best_model_name]
@@ -142,6 +195,12 @@ def get_top_features(model, feature_names, top_n=5):
                 importances = np.mean(np.abs(coef), axis=0)
             else:
                 importances = np.abs(coef)
+        elif hasattr(model, "cluster_centers_"):
+            # For K-Means, use variance of features across cluster centers
+            importances = np.var(model.cluster_centers_, axis=0)
+        elif hasattr(model, "means_"):
+            # For Gaussian Mixture, use variance of features across cluster means
+            importances = np.var(model.means_, axis=0)
         else:
             return []
 
@@ -155,5 +214,6 @@ def get_top_features(model, feature_names, top_n=5):
     except Exception as e:
         print(f"Error extracting feature importances: {e}")
         return []
+
 
 
