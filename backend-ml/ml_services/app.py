@@ -363,6 +363,25 @@ def generate_insights(
     if request.featureImportance:
         feature_importance_str = ", ".join([f"{item.get('feature')}: {item.get('importance'):.4f}" for item in request.featureImportance])
 
+    # Extract ANN details from leaderboard if present
+    ann_details = None
+    if request.leaderboard:
+        for item in request.leaderboard:
+            if item.get("model", "").startswith("ANN"):
+                ann_details = item.get("metrics", {}).get("ann_details")
+                break
+
+    ann_details_str = "N/A"
+    if ann_details:
+        es_info = "Early stopping triggered" if ann_details.get("early_stopping_triggered") else "Completed full epochs"
+        ann_details_str = (
+            f"Architecture: {ann_details.get('architecture')}, "
+            f"Parameters: {ann_details.get('num_params')}, "
+            f"Epochs Completed: {ann_details.get('epochs_completed')}, "
+            f"Early Stopping: {es_info}, "
+            f"Final Validation Loss: {ann_details.get('final_val_loss'):.4f}"
+        )
+
     prompt = (
         f"You are an expert AI data scientist. Analyze the following ML training result and dataset profiling report, "
         f"and provide a set of natural-language insights formatted in markdown. The insights must cover:\n"
@@ -376,8 +395,24 @@ def generate_insights(
         f"Best Model: {request.bestModel}\n"
         f"{metric_name}: {metric_value}\n"
         f"Best Hyperparameters: {best_hyperparameters_str}\n\n"
-        f"Provide 4-5 direct, actionable bullet points formatted in clean markdown. Output should be easy to read for a business stakeholder."
     )
+
+    if "ANN" in request.bestModel:
+        prompt += (
+            f"Additionally, since the best-performing model is an Artificial Neural Network (ANN), you MUST explicitly include the following details in your report:\n"
+            f"- ANN architecture used: {ann_details.get('architecture') if ann_details else 'N/A'}\n"
+            f"- Number of parameters: {ann_details.get('num_params') if ann_details else 'N/A'}\n"
+            f"- Training epochs completed: {ann_details.get('epochs_completed') if ann_details else 'N/A'}\n"
+            f"- Early stopping info: {'Yes (validation loss stopped improving)' if ann_details and ann_details.get('early_stopping_triggered') else 'No'} (Final Val Loss: {ann_details.get('final_val_loss') if ann_details else 'N/A'})\n"
+            f"- Comparison against traditional ML models: {leaderboard_str}\n"
+            f"- Reason why the selected ANN won over traditional models (e.g. learning non-linear relationships, better generalizability, capacity of weights)\n\n"
+        )
+    else:
+        prompt += (
+            f"Additionally, if an ANN was trained, you should include a brief comparison of how the winning traditional model compares against the ANN model: {ann_details_str} and the reason why the traditional model won (e.g., simpler linear patterns, overfitting of the neural net on a small dataset).\n\n"
+        )
+
+    prompt += "Provide 4-5 direct, actionable bullet points formatted in clean markdown. Output should be easy to read for a business stakeholder."
 
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key:
@@ -402,16 +437,34 @@ def generate_insights(
     # 1. Best model & leaderboard
     fallback_insights += f"- **Best Model Performance**: The AutoML competition selected **{request.bestModel}** as the top performer with a baseline {metric_name} of **{metric_value}**.\n"
     if request.leaderboard and len(request.leaderboard) > 1:
-        leaderboard_list = ", ".join([f"{item.get('model')} ({item.get('score'):.3f})" for item in request.leaderboard[:3]])
+        leaderboard_list = ", ".join([f"{item.get('model')} ({item.get('score'):.4f})" for item in request.leaderboard[:3]])
         fallback_insights += f"  - **Competition Leaderboard**: Tested models include: {leaderboard_list}.\n"
         
-    # 2. Features
+    # 2. ANN details if best or trained
+    if ann_details:
+        es_info = "Yes (validation loss did not improve for 10 epochs)" if ann_details.get("early_stopping_triggered") else "No (completed full training)"
+        fallback_insights += (
+            f"- **Artificial Neural Network (ANN) Metrics**:\n"
+            f"  - **Architecture**: `{ann_details.get('architecture')}`\n"
+            f"  - **Parameters**: {ann_details.get('num_params')}\n"
+            f"  - **Epochs Run**: {ann_details.get('epochs_completed')}\n"
+            f"  - **Early Stopping**: {es_info}\n"
+            f"  - **Final Validation Loss**: {ann_details.get('final_val_loss'):.4f}\n"
+        )
+
+    # 3. Winning reason
+    if "ANN" in request.bestModel:
+        fallback_insights += f"- **Why the ANN Won**: The neural network's non-linear layers, ReLU activations, and dropout regularization allowed it to capture complex, non-linear relationships in the dataset without overfitting, outperforming the simpler assumptions of traditional algorithms.\n"
+    else:
+        fallback_insights += f"- **Why the Traditional Model Won**: Traditional models (like {request.bestModel}) performed better because the dataset is likely linear or small, where high-capacity neural networks can easily overfit or fail to generalize compared to robust ensembles or linear regressors.\n"
+
+    # 4. Features
     if request.featureImportance:
         top_feats = request.featureImportance[:3]
         feat_list = ", ".join([f"**{item.get('feature')}** ({item.get('importance')*100:.1f}%)" for item in top_feats])
         fallback_insights += f"- **Most Influential Features**: The top predictors determining predictions are: {feat_list}.\n"
         
-    # 3. Quality report
+    # 5. Quality report
     if request.datasetQualityReport:
         q = request.datasetQualityReport
         fallback_insights += f"- **Dataset Characteristics**: Analyzed dataset **{request.datasetName}** containing **{q.get('rows')}** rows and **{q.get('columns')}** columns.\n"
@@ -422,11 +475,11 @@ def generate_insights(
             for warning in warnings_list[:3]:
                 fallback_insights += f"  - {warning}\n"
     
-    # 4. Hyperparameters
+    # 6. Hyperparameters
     if request.bestHyperparameters and len(request.bestHyperparameters) > 0:
         fallback_insights += f"- **Best Hyperparameters**: Optuna successfully tuned: `{request.bestHyperparameters}`.\n"
         
-    # 5. Recommendations
+    # 7. Recommendations
     fallback_insights += f"- **Business Recommendations**: Address any active data quality warnings, double down on engineering features derived from **{request.featureImportance[0].get('feature') if request.featureImportance else 'the top predictor'}**, and proceed to generate the inference code for model deployment."
 
     return {"insights": fallback_insights}

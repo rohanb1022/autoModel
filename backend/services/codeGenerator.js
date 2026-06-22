@@ -9,23 +9,26 @@ const generateModelCode = async (data) => {
       model: "gemini-3.5-flash"
     });
 
+    const isANN = data.bestModel && (data.bestModel.includes("ANN") || data.bestModel.includes("Neural Network"));
+    const libraryName = isANN ? "PyTorch" : "scikit-learn";
+
     const prompt = `
 You are a senior machine learning engineer.
 
-Generate complete Python sklearn code for this model.
+Generate complete Python code using ${libraryName} for this model.
 
 Dataset name: ${data.datasetName}
 Problem type: ${data.problemType}
 Best model: ${data.bestModel}
-Accuracy: ${data.accuracy}
+${data.problemType === 'clustering' ? 'Silhouette Score' : 'Accuracy'}: ${data.accuracy}
 
 Generate:
-- import libraries
+- import libraries (including ${isANN ? 'torch and torch.nn' : 'sklearn'})
 - load dataset
-- preprocessing
+- preprocessing (StandardScaler for numeric features, One-Hot Encoding for categorical)
 - train test split
-- model training
-- accuracy print
+- model training (with 10-epoch patience early stopping if PyTorch ANN)
+- metric/score printing
 - plots
 
 Give clean ready-to-run Google Colab code.

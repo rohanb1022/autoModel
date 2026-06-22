@@ -21,7 +21,16 @@ class ModelExplainer:
             importances = []
             
             # Extract importances/coefficients depending on model type
-            if hasattr(target_model, "feature_importances_"):
+            if hasattr(target_model, "input_layer"):
+                # PyTorch AetherANN model
+                first_layer = target_model.input_layer[0]
+                if hasattr(first_layer, "weight"):
+                    import torch
+                    with torch.no_grad():
+                        importances = torch.mean(torch.abs(first_layer.weight), dim=0).cpu().numpy()
+                else:
+                    importances = np.zeros(len(feature_names))
+            elif hasattr(target_model, "feature_importances_"):
                 importances = target_model.feature_importances_
             elif hasattr(target_model, "coef_"):
                 coef = target_model.coef_
