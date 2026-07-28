@@ -70,6 +70,16 @@ def score_columns(df: pd.DataFrame):
     # Sort by score descending
     scores = sorted(scores, key=lambda x: x["score"], reverse=True)
 
+    if not scores:
+        for col in df.columns:
+            scores.append({
+                "column": col,
+                "score": 0.5,
+                "unique": df[col].nunique(),
+                "missing_ratio": 0.0,
+                "reasons": ["Default fallback column"]
+            })
+
     return scores
 
 def detect_problem_type(y):
