@@ -13,6 +13,7 @@ from src.score_columns import score_columns, detect_problem_type
 load_dotenv()
 
 from src.data_cleaning import basic_cleaning
+from src.data_loader import smart_load_csv
 from src.eda import analyze_target_column, plot_target_distribution, plot_correlation_heatmap, plot_feature_distributions, plot_missing_values, plot_outliers_boxplot
 from src.train import prepare_data, train_models
 from rag.store_training_memory import store_training_memory
@@ -109,7 +110,7 @@ async def analyze_dataset(
             return {"error": f"Failed to download dataset: {resp.text}"}
 
         # Load dataset into memory
-        df = pd.read_csv(io.BytesIO(resp.content))
+        df = smart_load_csv(resp.content)
 
         if df.empty:
             return {"error": "Uploaded file is empty."}
@@ -129,12 +130,31 @@ async def analyze_dataset(
         profiler = DatasetProfiler(df, target_column, problem_type)
         profile_report = profiler.profile()
 
-        # Generate EDA
-        plot_target_distribution(df, target_column, problem_type)
-        plot_correlation_heatmap(df)
-        plot_feature_distributions(df)
-        plot_missing_values(df)
-        plot_outliers_boxplot(df)
+        # Generate EDA safely
+        try:
+            plot_target_distribution(df, target_column, problem_type)
+        except Exception as e:
+            print(f"[EDA WARNING] Target distribution plot skipped: {e}")
+
+        try:
+            plot_correlation_heatmap(df)
+        except Exception as e:
+            print(f"[EDA WARNING] Correlation heatmap plot skipped: {e}")
+
+        try:
+            plot_feature_distributions(df)
+        except Exception as e:
+            print(f"[EDA WARNING] Feature distributions plot skipped: {e}")
+
+        try:
+            plot_missing_values(df)
+        except Exception as e:
+            print(f"[EDA WARNING] Missing values plot skipped: {e}")
+
+        try:
+            plot_outliers_boxplot(df)
+        except Exception as e:
+            print(f"[EDA WARNING] Outliers boxplot skipped: {e}")
 
         return {
             "dataset_name": data.dataset_name,
@@ -178,7 +198,7 @@ async def confirm_target(
             return {"error": f"Failed to download dataset: {resp.text}"}
 
         # Load dataset into memory
-        df = pd.read_csv(io.BytesIO(resp.content))
+        df = smart_load_csv(resp.content)
         df = basic_cleaning(df)
 
         if target_column == "__clustering__":

@@ -219,38 +219,52 @@ def plot_missing_values(df):
     print("Missing values plot saved")
 
 def plot_outliers_boxplot(df):
+    try:
+        print("\nGenerating outliers boxplot...\n")
+        os.makedirs("outputs", exist_ok=True)
 
-    print("\nGenerating outliers boxplot...\n")
+        numeric_df = df.select_dtypes(include='number')
+        if numeric_df.shape[1] == 0:
+            print("No numeric columns found for outliers plot")
+            return
 
-    # create outputs folder if not exists
-    os.makedirs("outputs", exist_ok=True)
+        # Filter columns that have at least 1 non-null value
+        valid_cols = [col for col in numeric_df.columns if numeric_df[col].dropna().nunique() > 0]
+        if not valid_cols:
+            print("No valid numeric columns for outliers plot")
+            return
 
-    numeric_df = df.select_dtypes(include='number')
-    if numeric_df.shape[1] == 0:
-        print("No numeric columns found for outliers plot")
-        return
+        if len(valid_cols) > 6:
+            stds = numeric_df[valid_cols].std().dropna()
+            if not stds.empty:
+                valid_cols = list(stds.nlargest(6).index)
 
-    # Select top 6 features with highest standard deviation
-    num_cols = list(numeric_df.columns)
-    if len(num_cols) > 6:
-        num_cols = list(numeric_df.std().nlargest(6).index)
+        total = len(valid_cols)
+        if total == 0:
+            return
 
-    total = len(num_cols)
-    cols = min(3, total)
-    rows = (total + cols - 1) // cols
+        cols = min(3, total)
+        rows = (total + cols - 1) // cols
 
-    plt.figure(figsize=(15, 4.5 * rows), facecolor='white')
-    sns.set_theme(style="whitegrid")
+        plt.figure(figsize=(15, 4.5 * rows), facecolor='white')
+        sns.set_theme(style="whitegrid")
 
-    for i, column in enumerate(num_cols, 1):
-        plt.subplot(rows, cols, i)
-        sns.boxplot(x=numeric_df[column], color="#4b41e1", flierprops=dict(markerfacecolor='red', marker='D', markersize=5))
-        plt.title(f"Outliers in {column}", fontsize=13, fontweight='bold', color='#0f172a', pad=10)
-        plt.xlabel(column, fontsize=11, color='#334155')
-        plt.grid(True, linestyle="--", alpha=0.5, color="#cbd5e1")
+        for i, column in enumerate(valid_cols, 1):
+            try:
+                plt.subplot(rows, cols, i)
+                clean_col = numeric_df[column].dropna()
+                if not clean_col.empty:
+                    sns.boxplot(x=clean_col, color="#4b41e1", flierprops=dict(markerfacecolor='red', marker='D', markersize=5))
+                plt.title(f"Outliers in {column}", fontsize=13, fontweight='bold', color='#0f172a', pad=10)
+                plt.xlabel(column, fontsize=11, color='#334155')
+                plt.grid(True, linestyle="--", alpha=0.5, color="#cbd5e1")
+            except Exception as sub_err:
+                print(f"Skipping boxplot for column '{column}': {sub_err}")
 
-    plt.tight_layout(pad=3.0)
-    plt.savefig("outputs/outliers_boxplot.png", dpi=150, facecolor='white')
-    plt.close()
+        plt.tight_layout(pad=3.0)
+        plt.savefig("outputs/outliers_boxplot.png", dpi=150, facecolor='white')
+        plt.close()
 
-    print("Outliers boxplot saved")
+        print("Outliers boxplot saved")
+    except Exception as e:
+        print(f"Outliers boxplot generation skipped due to: {e}")
