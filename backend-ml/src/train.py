@@ -120,7 +120,9 @@ def train_models(X_train, X_test, y_train, y_test, problem_type):
     if problem_type == "classification":
         from sklearn.preprocessing import LabelEncoder
         label_encoder = LabelEncoder()
-        y_train_encoded = label_encoder.fit_transform(y_train)
+        # Fit on both train and test to handle rare classes safely in small datasets
+        label_encoder.fit(pd.concat([y_train, y_test]))
+        y_train_encoded = label_encoder.transform(y_train)
         y_test_encoded = label_encoder.transform(y_test)
         y_train = pd.Series(y_train_encoded, index=y_train.index)
         y_test = pd.Series(y_test_encoded, index=y_test.index)

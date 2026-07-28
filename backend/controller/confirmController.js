@@ -33,6 +33,14 @@ exports.confirmTarget = async (req, res) => {
     const data = response.data;
     console.log("[BACKEND] ML Service Response Data:", data);
 
+    if (data.error) {
+      console.error("[BACKEND] ML Training Error:", data.error, data.details);
+      return res.status(422).json({
+        error: "ML training failed",
+        details: data.details || data.error
+      });
+    }
+
     // Process Auto-Heal System Messages
     const system_messages = data.system_messages || [];
     const savedMessages = [];
