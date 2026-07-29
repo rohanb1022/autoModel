@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { ML_SERVICE_URL } = require("../config/urls");
 const { logError } = require("../utils/errorLogger.js");
 const ModelRun = require("../models/ModelRun.js");
@@ -11,8 +12,7 @@ exports.handleChat = async (req, res) => {
       return res.status(400).json({ error: "Question is required" });
     }
 
-    console.log("[BACKEND] Proxying chat request to ML service...");
-
+    // 1. Try ML Service /chat first if available
     try {
       const response = await axios.post(
         `${ML_SERVICE_URL}/chat`,
@@ -22,7 +22,7 @@ exports.handleChat = async (req, res) => {
             Authorization: req.headers.authorization,
             "Content-Type": "application/json",
           },
-          timeout: 15000,
+          timeout: 10000,
         }
       );
 
@@ -30,12 +30,57 @@ exports.handleChat = async (req, res) => {
         return res.json(response.data);
       }
     } catch (mlErr) {
-      console.warn("[BACKEND-WARN] ML service /chat endpoint unreachable or error. Generating local context answer:", mlErr.message);
+      // ML Service endpoint down or 404 - handle locally seamlessly
     }
 
-    // Fallback: Fetch user's latest model run from MongoDB to answer question accurately
+    // 2. Direct AI Generation using Gemini with User's MongoDB Context
     const userId = req.user ? req.user._id : null;
     const lastRun = userId ? await ModelRun.findOne({ userId }).sort({ createdAt: -1 }) : null;
+
+    const keys = [
+      process.env.GEMINI_API_KEY,
+      process.env.GEMINI_API_KEY_2,
+      process.env.GEMINI_API_KEY_3,
+    ].filter(Boolean);
+
+    if (keys.length > 0) {
+      let contextStr = "No dataset trained yet.";
+      if (lastRun) {
+        const scoreVal = lastRun.accuracy || 0;
+        const accStr = lastRun.problemType === 'clustering' ? scoreVal.toFixed(3) : `${(scoreVal * (scoreVal <= 1 ? 100 : 1)).toFixed(1)}%`;
+        contextStr = `Dataset Name: ${lastRun.datasetName}, Best Model: ${lastRun.bestModel}, Score: ${accStr}, Target Column: ${lastRun.targetColumn}, Problem Type: ${lastRun.problemType}, Rows: ${lastRun.rows}, Columns: ${lastRun.columns}`;
+        if (lastRun.topFeatures && lastRun.topFeatures.length > 0) {
+          contextStr += `, Top Features: ${lastRun.topFeatures.slice(0, 5).join(', ')}`;
+        }
+      }
+
+      const prompt = `You are an expert AI Data Assistant on the AutoModel machine learning platform.
+User's Dataset & Trained Model Context:
+${contextStr}
+
+User Question: ${question}
+
+RULES:
+1. Answer the user's question accurately based on their dataset context if provided.
+2. If the user asks general ML questions, give a clear, professional, concise answer.
+3. Use clean markdown formatting (bullet points, bold text).`;
+
+      for (const key of keys) {
+        try {
+          const genAI = new GoogleGenerativeAI(key);
+          const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const result = await model.generateContent(prompt);
+          const resText = await result.response.text();
+          if (resText && resText.trim()) {
+            return res.json({ response: resText.trim() });
+          }
+        } catch (e) {
+          console.warn(`[CHAT] Gemini key failed: ${e.message}. Trying next key...`);
+        }
+      }
+    }
+
+    // 3. Guaranteed Rule-Based Fallback Engine (Zero API calls required)
     const qLower = question.toLowerCase();
     let answer = "";
 

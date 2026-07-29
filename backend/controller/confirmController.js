@@ -94,40 +94,46 @@ exports.confirmTarget = async (req, res) => {
 
     console.log("[BACKEND] Saved ModelRun with ID:", newRun._id, "Accuracy:", newRun.accuracy, "Rows:", newRun.rows);
 
-    // Asynchronously generate AI Insights in the background to avoid blocking the response
+    // Asynchronously generate AI Insights in the background using Gemini / Structured Analysis
     (async () => {
       try {
-        const insightUrl = `${ML_SERVICE_URL}/generate-insights`;
-        console.log("[BACKEND-DEBUG] Background requesting local insight generation for:", dataset_name || data.dataset_name, "at URL:", insightUrl);
-        
-        const insightResponse = await axios.post(
-          insightUrl,
-          {
-            datasetName: dataset_name || data.dataset_name,
-            problemType: data.problem_type,
-            bestModel: data.best_model,
-            accuracy: data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0),
-            datasetQualityReport: data.profile_report || null,
-            leaderboard: data.leaderboard || [],
-            bestHyperparameters: data.optuna_results?.best_params || {},
-            featureImportance: data.explain_report?.top_features || []
-          },
-          { headers: { Authorization: token } }
-        );
-        
-        let backgroundInsights = "Model trained successfully";
-        if (insightResponse.data && insightResponse.data.insights) {
-          backgroundInsights = insightResponse.data.insights;
-        }
-        
-        await ModelRun.findByIdAndUpdate(newRun._id, { insights: backgroundInsights });
-        console.log("[BACKEND-DEBUG] Insights generated in background and updated for ModelRun:", newRun._id);
-      } catch (genError) {
-        console.warn("[BACKEND-WARN] ML service generate-insights unreachable. Generating dynamic fallback insights:", genError.message);
         const scoreVal = data.score !== undefined ? parseFloat(data.score) : (data.accuracy !== undefined ? parseFloat(data.accuracy) : 0);
         const accStr = data.problem_type === 'clustering' ? scoreVal.toFixed(3) : `${(scoreVal * (scoreVal <= 1 ? 100 : 1)).toFixed(1)}%`;
         const dsName = dataset_name || data.dataset_name || "uploaded_dataset.csv";
-        const fallbackInsightText = `### Model Insights & Evaluation Summary
+
+        let generatedInsights = "";
+        const { GoogleGenerativeAI } = require("@google/generative-ai");
+        const keys = [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
+
+        if (keys.length > 0) {
+          const prompt = `You are a senior Machine Learning Architect. Analyze this ML training result and write a concise, professional markdown insights report for business stakeholders.
+
+Dataset: ${dsName}
+Problem Type: ${data.problem_type}
+Best Model: ${data.best_model}
+Score/Accuracy: ${accStr}
+Rows: ${data.rows || "N/A"}, Columns: ${data.columns || "N/A"}
+
+Provide 3-4 clear bullet points covering performance assessment, data observation, and actionable next steps.`;
+
+          for (const key of keys) {
+            try {
+              const genAI = new GoogleGenerativeAI(key);
+              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+              const result = await model.generateContent(prompt);
+              const text = await result.response.text();
+              if (text && text.trim()) {
+                generatedInsights = text.trim();
+                break;
+              }
+            } catch (e) {
+              // Try next key
+            }
+          }
+        }
+
+        if (!generatedInsights) {
+          generatedInsights = `### Model Insights & Evaluation Summary
 
 - **Performance Assessment**: **${data.best_model}** achieved **${accStr}** on **${dsName}** for the **${data.problem_type}** task — demonstrating strong baseline generalizability.
 - **Data & Feature Engineering**: The automated pipeline cleaned invalid values and scaled feature columns to maximize model performance.
@@ -135,8 +141,12 @@ exports.confirmTarget = async (req, res) => {
   1. Perform hyperparameter tuning using GridSearch to optimize model parameters.
   2. Check feature correlation heatmaps to identify and prune highly collinear features.
   3. Test the model against unseen validation data before production deployment.`;
+        }
 
-        await ModelRun.findByIdAndUpdate(newRun._id, { insights: fallbackInsightText });
+        await ModelRun.findByIdAndUpdate(newRun._id, { insights: generatedInsights });
+        console.log("[BACKEND] Model insights successfully saved for ModelRun:", newRun._id);
+      } catch (genError) {
+        console.error("[BACKEND ERROR] Background insight generation error:", genError.message);
       }
     })();
 
