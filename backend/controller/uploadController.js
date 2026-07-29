@@ -1,6 +1,7 @@
 const axios = require("axios");
 const fs = require("fs");
 const mongoose = require("mongoose");
+const FormData = require("form-data");
 const { GridFSBucket } = require("mongodb");
 const { ML_SERVICE_URL } = require("../config/urls");
 const { logError } = require("../utils/errorLogger.js");
@@ -36,12 +37,11 @@ exports.uploadDataset = async (req, res) => {
     uploadStream.on('finish', async () => {
       const datasetId = uploadStream.id.toString();
       
-      // 2. Call ML Service /analyze with dataset_id (with retry for HF space cold starts)
+      // 2. Call ML Service /analyze with multipart form-data (file + dataset_id)
       try {
         console.log(`[UPLOAD] Calling ML service: ${ML_SERVICE_URL}/analyze with dataset_id=${datasetId}`);
         
         let response;
-        let responseText = "";
         let mlData = null;
         let attempts = 0;
         const maxAttempts = 3;
@@ -49,54 +49,57 @@ exports.uploadDataset = async (req, res) => {
         while (attempts < maxAttempts) {
           attempts++;
           try {
-            response = await fetch(`${ML_SERVICE_URL}/analyze`, {
-              method: "POST",
+            const formData = new FormData();
+            formData.append("file", fs.createReadStream(filePath), {
+              filename: req.file.originalname,
+              contentType: req.file.mimetype || 'text/csv',
+            });
+            formData.append("dataset_id", datasetId);
+            formData.append("dataset_name", req.file.originalname);
+
+            response = await axios.post(`${ML_SERVICE_URL}/analyze`, formData, {
               headers: {
-                "Content-Type": "application/json",
-                "Authorization": token || "",
+                ...formData.getHeaders(),
+                Authorization: token || "",
               },
-              body: JSON.stringify({ dataset_id: datasetId, dataset_name: req.file.originalname })
+              timeout: 120000,
             });
 
-            responseText = await response.text();
-            
-            try {
-              mlData = JSON.parse(responseText);
-            } catch (e) {
-              mlData = null;
-            }
-
-            // If success or valid JSON response received, exit retry loop
-            if (response.ok && mlData) {
+            mlData = response.data;
+            if (response.status === 200 && mlData) {
               break;
             }
+          } catch (axiosErr) {
+            if (axiosErr.response) {
+              response = axiosErr.response;
+              mlData = axiosErr.response.data;
+              console.warn(`[UPLOAD] ML service attempt ${attempts}/${maxAttempts} returned HTTP ${response.status}:`, JSON.stringify(mlData).substring(0, 200));
 
-            // If 502/503/504 or non-JSON HTML (HF space waking up), wait & retry
-            if ([502, 503, 504].includes(response.status) || (!mlData && attempts < maxAttempts)) {
-              console.warn(`[UPLOAD] ML service attempt ${attempts}/${maxAttempts} returned HTTP ${response.status}. Retrying in 4s...`);
-              await new Promise((r) => setTimeout(r, 4000));
-              continue;
-            }
-
-            break;
-          } catch (netErr) {
-            console.warn(`[UPLOAD] Network error on attempt ${attempts}/${maxAttempts}: ${netErr.message}`);
-            if (attempts < maxAttempts) {
-              await new Promise((r) => setTimeout(r, 4000));
+              // If 502/503/504 or HF space waking up, wait & retry
+              if ([502, 503, 504].includes(response.status) && attempts < maxAttempts) {
+                await new Promise((r) => setTimeout(r, 4000));
+                continue;
+              }
+              break;
             } else {
-              throw netErr;
+              console.warn(`[UPLOAD] Network error on attempt ${attempts}/${maxAttempts}: ${axiosErr.message}`);
+              if (attempts < maxAttempts) {
+                await new Promise((r) => setTimeout(r, 4000));
+              } else {
+                throw axiosErr;
+              }
             }
           }
         }
 
-        console.log(`[UPLOAD] ML service responded with status ${response?.status}:`, mlData ? JSON.stringify(mlData).substring(0, 300) : responseText.substring(0, 300));
+        console.log(`[UPLOAD] ML service responded with status ${response?.status}:`, mlData ? JSON.stringify(mlData).substring(0, 300) : "No data");
 
-        if (!response || !response.ok || (mlData && mlData.error)) {
+        if (!response || response.status !== 200 || (mlData && mlData.error)) {
           const errMsg = mlData?.error || mlData?.detail || `ML service unavailable or error (HTTP ${response?.status || 500})`;
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
           }
-          return res.status(response?.ok ? 422 : (response?.status || 500)).json({
+          return res.status(response?.status && response.status !== 200 ? 422 : 500).json({
             error: "ML Analysis failed.",
             details: errMsg
           });

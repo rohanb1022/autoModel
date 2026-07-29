@@ -4,7 +4,8 @@ import uvicorn
 import pandas as pd
 import io
 import requests as http_requests
-from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks
+from typing import Optional
+from fastapi import FastAPI, Depends, HTTPException, Request, BackgroundTasks, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -76,8 +77,8 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
 
 class AnalyzeRequest(BaseModel):
-    dataset_id: str
-    dataset_name: str
+    dataset_id: Optional[str] = None
+    dataset_name: Optional[str] = None
 
 class ConfirmTargetRequest(BaseModel):
     target_column: str = Field(..., min_length=1, max_length=200)
@@ -96,24 +97,43 @@ def home():
 # ----------------------------------------
 @app.post("/analyze")
 async def analyze_dataset(
-    data: AnalyzeRequest,
     req: Request,
+    file: Optional[UploadFile] = File(None),
+    dataset_id: Optional[str] = Form(None),
+    dataset_name: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user)
 ):
     try:
-        print("[ANALYZE REQUEST] Received:", data.dict())
+        print("[ANALYZE REQUEST] Received file:", file.filename if file else None, "dataset_id:", dataset_id)
         token = req.headers.get("Authorization")
+        df = None
+        ds_name = dataset_name or "uploaded_dataset.csv"
 
-        # Fetch dataset from Node.js backend GridFS
-        resp = http_requests.get(f"{_node_backend}/api/dataset/{data.dataset_id}/download", headers={"Authorization": token})
-        if resp.status_code != 200:
-            return {"error": f"Failed to download dataset: {resp.text}"}
+        if file is not None:
+            content = await file.read()
+            if content:
+                df = smart_load_csv(content)
+                ds_name = file.filename or ds_name
 
-        # Load dataset into memory
-        df = smart_load_csv(resp.content)
+        if (df is None or df.empty) and (dataset_id or req.headers.get("content-type") == "application/json"):
+            req_dataset_id = dataset_id
+            if not req_dataset_id:
+                try:
+                    body_json = await req.json()
+                    req_dataset_id = body_json.get("dataset_id")
+                    ds_name = body_json.get("dataset_name", ds_name)
+                except Exception:
+                    pass
 
-        if df.empty:
-            return {"error": "Uploaded file is empty."}
+            if req_dataset_id:
+                # Fetch dataset from Node.js backend GridFS
+                resp = http_requests.get(f"{_node_backend}/api/dataset/{req_dataset_id}/download", headers={"Authorization": token})
+                if resp.status_code != 200:
+                    return {"error": f"Failed to download dataset: {resp.text}"}
+                df = smart_load_csv(resp.content)
+
+        if df is None or df.empty:
+            return {"error": "Uploaded file is empty or invalid."}
 
         # Cleaning
         df = basic_cleaning(df)
@@ -157,7 +177,7 @@ async def analyze_dataset(
             print(f"[EDA WARNING] Outliers boxplot skipped: {e}")
 
         return {
-            "dataset_name": data.dataset_name,
+            "dataset_name": ds_name,
             "rows": df.shape[0],
             "columns_count": df.shape[1],
             "all_columns": list(df.columns),
