@@ -36,31 +36,67 @@ exports.uploadDataset = async (req, res) => {
     uploadStream.on('finish', async () => {
       const datasetId = uploadStream.id.toString();
       
-      // 2. Call ML Service /analyze with dataset_id
+      // 2. Call ML Service /analyze with dataset_id (with retry for HF space cold starts)
       try {
         console.log(`[UPLOAD] Calling ML service: ${ML_SERVICE_URL}/analyze with dataset_id=${datasetId}`);
-        const response = await fetch(`${ML_SERVICE_URL}/analyze`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": token || "",
-          },
-          body: JSON.stringify({ dataset_id: datasetId, dataset_name: req.file.originalname })
-        });
         
-        let mlData;
-        try {
-          mlData = await response.json();
-        } catch (e) {
-          throw new Error(`Failed to parse ML response (HTTP ${response.status})`);
+        let response;
+        let responseText = "";
+        let mlData = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+
+        while (attempts < maxAttempts) {
+          attempts++;
+          try {
+            response = await fetch(`${ML_SERVICE_URL}/analyze`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": token || "",
+              },
+              body: JSON.stringify({ dataset_id: datasetId, dataset_name: req.file.originalname })
+            });
+
+            responseText = await response.text();
+            
+            try {
+              mlData = JSON.parse(responseText);
+            } catch (e) {
+              mlData = null;
+            }
+
+            // If success or valid JSON response received, exit retry loop
+            if (response.ok && mlData) {
+              break;
+            }
+
+            // If 502/503/504 or non-JSON HTML (HF space waking up), wait & retry
+            if ([502, 503, 504].includes(response.status) || (!mlData && attempts < maxAttempts)) {
+              console.warn(`[UPLOAD] ML service attempt ${attempts}/${maxAttempts} returned HTTP ${response.status}. Retrying in 4s...`);
+              await new Promise((r) => setTimeout(r, 4000));
+              continue;
+            }
+
+            break;
+          } catch (netErr) {
+            console.warn(`[UPLOAD] Network error on attempt ${attempts}/${maxAttempts}: ${netErr.message}`);
+            if (attempts < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 4000));
+            } else {
+              throw netErr;
+            }
+          }
         }
 
-        console.log(`[UPLOAD] ML service responded with status ${response.status}:`, JSON.stringify(mlData).substring(0, 300));
+        console.log(`[UPLOAD] ML service responded with status ${response?.status}:`, mlData ? JSON.stringify(mlData).substring(0, 300) : responseText.substring(0, 300));
 
-        // Treat both HTTP errors AND ML-level errors (200 + {error:...}) as failures
-        if (!response.ok || mlData.error) {
-          const errMsg = mlData.error || mlData.detail || "ML service error";
-          return res.status(response.ok ? 422 : response.status).json({
+        if (!response || !response.ok || (mlData && mlData.error)) {
+          const errMsg = mlData?.error || mlData?.detail || `ML service unavailable or error (HTTP ${response?.status || 500})`;
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+          return res.status(response?.ok ? 422 : (response?.status || 500)).json({
             error: "ML Analysis failed.",
             details: errMsg
           });
@@ -81,7 +117,7 @@ exports.uploadDataset = async (req, res) => {
         }
         res.status(mlError.response?.status || 500).json({
           error: "ML Analysis failed.",
-          details: mlError.response?.data || mlError.message
+          details: mlError.response?.data?.details || mlError.response?.data?.error || mlError.message
         });
       }
     });

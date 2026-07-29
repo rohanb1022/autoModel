@@ -94,9 +94,9 @@ def _call_huggingface(system_prompt: str, user_prompt: str) -> str:
     Fallback 2: HuggingFace Inference API -- free tier.
     Uses Mistral 7B Instruct which supports system prompts via [INST] format.
     """
-    hf_token = os.getenv("HF_API_TOKEN")
+    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
     if not hf_token:
-        raise RuntimeError("HF_API_TOKEN not set")
+        raise RuntimeError("HF_API_TOKEN / HF_TOKEN not set")
 
     # Mistral Instruct format
     formatted_prompt = f"[INST] {system_prompt}\n\n{user_prompt} [/INST]"

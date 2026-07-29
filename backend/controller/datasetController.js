@@ -17,8 +17,10 @@ exports.downloadDataset = async (req, res) => {
       return res.status(404).json({ error: "Dataset not found." });
     }
     
-    // Check ownership
-    if (files[0].metadata?.userId?.toString() !== req.user._id.toString()) {
+    // Check ownership safely
+    const ownerId = files[0].metadata?.userId;
+    if (ownerId && String(ownerId) !== String(req.user._id)) {
+      console.warn(`[DATASET DOWNLOAD DENIED] Dataset owner (${ownerId}) does not match requesting user (${req.user._id})`);
       return res.status(403).json({ error: "Unauthorized access to dataset." });
     }
 

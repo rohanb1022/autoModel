@@ -127,7 +127,7 @@ def detect_target_with_ai(df: pd.DataFrame):
 
 
         # 4. Try Hugging Face (Mistral 7B Fallback)
-        hf_token = os.getenv("HF_API_TOKEN")
+        hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
         if hf_token:
             try:
                 print("[AI Target Detection] Trying HuggingFace...")

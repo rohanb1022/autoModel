@@ -32,9 +32,9 @@ app = FastAPI()
 # SECURITY: allow_origins=["*"] + allow_credentials=True is invalid and
 # a security misconfiguration. Always use explicit origins in production.
 # ----------------------------------------
-_frontend_url   = os.getenv("FRONTEND_URL", "http://localhost:8080")
+_frontend_url   = os.getenv("FRONTEND_URL", "http://localhost:8080").rstrip("/")
 # Default to the production Render backend so the HF space can call it even without the env var
-_node_backend   = os.getenv("NODE_BACKEND_URL", "https://automodel-backend-g5oh.onrender.com")
+_node_backend   = os.getenv("NODE_BACKEND_URL", "https://automodel-backend-g5oh.onrender.com").rstrip("/")
 
 ALLOWED_ORIGINS = [
     "http://localhost:8080",

@@ -19,16 +19,32 @@ exports.confirmTarget = async (req, res) => {
       return res.status(400).json({ error: "Dataset ID is required" });
     }
 
-    // Call ML service to confirm target and start training
-    const response = await axios.post(
-      `${ML_SERVICE_URL}/confirm-target`,
-      { target_column, dataset_name, dataset_id },
-      {
-        headers: {
-          Authorization: token,
-        },
+    // Call ML service to confirm target and start training (with retry for HF space cold start)
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        response = await axios.post(
+          `${ML_SERVICE_URL}/confirm-target`,
+          { target_column, dataset_name, dataset_id },
+          {
+            headers: { Authorization: token },
+            timeout: 120000, // 2 min timeout for training
+          }
+        );
+        break;
+      } catch (err) {
+        if (attempts < maxAttempts && (err.code === "ECONNRESET" || err.code === "ETIMEDOUT" || err.response?.status >= 500)) {
+          console.warn(`[CONFIRM TARGET] Attempt ${attempts}/${maxAttempts} failed (${err.message}). Retrying in 4s...`);
+          await new Promise((r) => setTimeout(r, 4000));
+        } else {
+          throw err;
+        }
       }
-    );
+    }
 
     const data = response.data;
     console.log("[BACKEND] ML Service Response Data:", data);
@@ -119,11 +135,11 @@ exports.confirmTarget = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("CONFIRM TARGET ERROR:", error.message);
+    console.error("CONFIRM TARGET ERROR:", error.response?.data || error.message);
     logError("CONFIRM TARGET ERROR", error);
-    res.status(500).json({
+    res.status(error.response?.status || 500).json({
       error: "Training failed",
-      details: error.response?.data?.details || error.message,
+      details: error.response?.data?.details || error.response?.data?.error || error.message,
     });
   }
 };

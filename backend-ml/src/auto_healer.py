@@ -48,7 +48,7 @@ def call_gemma_llm(prompt: str) -> str:
 
 
     # 4. Try HuggingFace (Final Fallback)
-    hf_token = os.getenv("HF_API_TOKEN")
+    hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
     if hf_token:
         try:
             print("[Auto-Healer] Trying HuggingFace (Mistral 7B)...")
