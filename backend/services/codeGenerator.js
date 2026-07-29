@@ -43,14 +43,14 @@ function cleanExtractedCode(text) {
   const match = text.match(/```(?:python)?\s*([\s\S]*?)```/i);
   let codeStr = match ? match[1].trim() : text.trim();
 
-  // Basic sanity check: verify code is not truncated mid-line and contains imports + model execution
+  // Basic sanity check: verify code is complete and contains imports + model execution
   if (
     (codeStr.includes("import ") || codeStr.includes("from ")) &&
     (codeStr.includes("fit") || codeStr.includes("predict") || codeStr.includes("torch") || codeStr.includes("model")) &&
     !codeStr.endsWith("utf-") &&
     !codeStr.endsWith("#")
   ) {
-    return `\`\`\`python\n${codeStr}\n\`\`\``;
+    return codeStr; // Return clean raw Python code for direct <pre><code> rendering
   }
   return null;
 }
@@ -65,10 +65,8 @@ function generateDeterministicPythonCode(data) {
 
   const isANN = bestModel.includes("ANN") || bestModel.includes("Neural Network") || bestModel.includes("PyTorch");
 
-  let codeBody = "";
-
   if (isANN) {
-    codeBody = `# ==============================================================================
+    return `# ==============================================================================
 # AutoModel Production Inference & Training Script (PyTorch Neural Network)
 # Dataset: ${datasetName} | Model: ${bestModel} | Target: ${targetCol}
 # Performance Score: ${accStr}
@@ -83,10 +81,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import classification_report, accuracy_score
 
+# 1. Load Dataset
 print("Loading dataset '${datasetName}'...")
 df = pd.read_csv("${datasetName}")
 
-# 1. Feature & Target Isolation
+# 2. Feature & Target Isolation
 if "${targetCol}" in df.columns:
     X = df.drop(columns=["${targetCol}"]).select_dtypes(include=[np.number]).values
     y = df["${targetCol}"].values
@@ -94,10 +93,10 @@ else:
     X = df.iloc[:, :-1].select_dtypes(include=[np.number]).values
     y = df.iloc[:, -1].values
 
-# 2. Train / Test Split (80/20)
+# 3. Train / Test Split (80/20)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 3. Feature Scaling
+# 4. Feature Scaling
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
@@ -108,7 +107,7 @@ y_train_t = torch.tensor(y_train, dtype=torch.long)
 X_test_t = torch.tensor(X_test_scaled, dtype=torch.float32)
 y_test_t = torch.tensor(y_test, dtype=torch.long)
 
-# 4. Neural Network Architecture
+# 5. Neural Network Architecture Definition
 class PyTorchANNModel(nn.Module):
     def __init__(self, input_dim, num_classes=2):
         super(PyTorchANNModel, self).__init__()
@@ -129,7 +128,7 @@ model = PyTorchANNModel(input_dim=X_train.shape[1], num_classes=num_classes)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-# 5. Training Loop
+# 6. Model Training Loop
 print("Training PyTorch ANN Neural Network...")
 for epoch in range(100):
     optimizer.zero_grad()
@@ -138,31 +137,32 @@ for epoch in range(100):
     loss.backward()
     optimizer.step()
 
-# 6. Model Evaluation
+# 7. Model Evaluation & Score Output
 model.eval()
 with torch.no_grad():
     predictions = torch.argmax(model(X_test_t), dim=1).numpy()
     final_acc = accuracy_score(y_test, predictions)
     print(f"\\n>>> Model Accuracy: {final_acc * 100:.2f}% <<<\\n")
     print("Classification Report:\\n", classification_report(y_test, predictions))`;
-  } else {
-    let modelImport = `from sklearn.linear_model import LogisticRegression\nmodel = LogisticRegression(max_iter=1000, random_state=42)`;
-    
-    if (bestModel.includes("Random Forest")) {
-      modelImport = `from sklearn.ensemble import RandomForestClassifier\nmodel = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)`;
-    } else if (bestModel.includes("XGBoost")) {
-      modelImport = `from xgboost import XGBClassifier\nmodel = XGBClassifier(n_estimators=100, learning_rate=0.05, random_state=42)`;
-    } else if (bestModel.includes("Gradient")) {
-      modelImport = `from sklearn.ensemble import GradientBoostingClassifier\nmodel = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, random_state=42)`;
-    } else if (bestModel.includes("SVM") || bestModel.includes("Support Vector")) {
-      modelImport = `from sklearn.svm import SVC\nmodel = SVC(kernel='rbf', probability=True, random_state=42)`;
-    } else if (bestModel.includes("Decision Tree")) {
-      modelImport = `from sklearn.tree import DecisionTreeClassifier\nmodel = DecisionTreeClassifier(random_state=42)`;
-    } else if (bestModel.includes("KNN") || bestModel.includes("K-Neighbors")) {
-      modelImport = `from sklearn.neighbors import KNeighborsClassifier\nmodel = KNeighborsClassifier(n_neighbors=5)`;
-    }
+  }
 
-    codeBody = `# ==============================================================================
+  let modelImport = `from sklearn.linear_model import LogisticRegression\nmodel = LogisticRegression(max_iter=1000, random_state=42)`;
+  
+  if (bestModel.includes("Random Forest")) {
+    modelImport = `from sklearn.ensemble import RandomForestClassifier\nmodel = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)`;
+  } else if (bestModel.includes("XGBoost")) {
+    modelImport = `from xgboost import XGBClassifier\nmodel = XGBClassifier(n_estimators=100, learning_rate=0.05, random_state=42)`;
+  } else if (bestModel.includes("Gradient")) {
+    modelImport = `from sklearn.ensemble import GradientBoostingClassifier\nmodel = GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, random_state=42)`;
+  } else if (bestModel.includes("SVM") || bestModel.includes("Support Vector")) {
+    modelImport = `from sklearn.svm import SVC\nmodel = SVC(kernel='rbf', probability=True, random_state=42)`;
+  } else if (bestModel.includes("Decision Tree")) {
+    modelImport = `from sklearn.tree import DecisionTreeClassifier\nmodel = DecisionTreeClassifier(random_state=42)`;
+  } else if (bestModel.includes("KNN") || bestModel.includes("K-Neighbors")) {
+    modelImport = `from sklearn.neighbors import KNeighborsClassifier\nmodel = KNeighborsClassifier(n_neighbors=5)`;
+  }
+
+  return `# ==============================================================================
 # AutoModel Production Inference & Training Script
 # Dataset: ${datasetName} | Model: ${bestModel} | Target: ${targetCol}
 # Performance Score: ${accStr}
@@ -210,7 +210,7 @@ pipeline = Pipeline(steps=[
 # 5. Train / Test Split (80% Train, 20% Test)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# 6. Fit Model & Evaluate
+# 6. Fit Model & Evaluate Performance
 print("Fitting ${bestModel} model...")
 pipeline.fit(X_train, y_train)
 
@@ -221,9 +221,6 @@ print(f"Target Column: ${targetCol}")
 print(f"Model Accuracy Score: {accuracy_score(y_test, y_pred) * 100:.2f}%")
 print("="*50 + "\\n")
 print("Detailed Classification Report:\\n", classification_report(y_test, y_pred))`;
-  }
-
-  return `\`\`\`python\n${codeBody}\n\`\`\``;
 }
 
 const generateModelCode = async (data) => {
@@ -251,9 +248,7 @@ Requirements:
 - ColumnTransformer preprocessing
 - train_test_split (80/20)
 - model fitting
-- accuracy printing and classification_report
-
-Enclose code in \`\`\`python ... \`\`\`.`;
+- accuracy printing and classification_report`;
 
   // 1. Primary: Try Gemini REST API with clean extraction
   const aiCode = await callGeminiRest(prompt);
