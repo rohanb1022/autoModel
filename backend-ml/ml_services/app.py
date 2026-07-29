@@ -381,8 +381,6 @@ def generate_insights(
     request: InsightRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    import google.generativeai as genai
-
     metric_name = "Silhouette Score" if request.problemType == "clustering" else "Accuracy"
     metric_value = f"{request.accuracy:.3f}" if request.problemType == "clustering" else f"{request.accuracy * 100:.1f}%"
 
