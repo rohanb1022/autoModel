@@ -3,6 +3,30 @@ const { ML_SERVICE_URL } = require("../config/urls");
 const { logError } = require("../utils/errorLogger.js");
 const ModelRun = require("../models/ModelRun.js");
 
+function ensureCompleteResponse(text) {
+  if (!text || typeof text !== "string") return null;
+  let trimmed = text.trim();
+  if (!trimmed) return null;
+
+  // If text ends cleanly with punctuation or code block closure, return as is
+  if (/[.!?`}]\s*$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  // If text was cut off mid-sentence, trim back to the last complete sentence
+  const lastPunct = Math.max(
+    trimmed.lastIndexOf("."),
+    trimmed.lastIndexOf("!"),
+    trimmed.lastIndexOf("?")
+  );
+
+  if (lastPunct > 20) {
+    return trimmed.substring(0, lastPunct + 1);
+  }
+
+  return trimmed;
+}
+
 async function callGeminiRest(prompt) {
   const keys = [
     process.env.GEMINI_API_KEY,
@@ -21,13 +45,16 @@ async function callGeminiRest(prompt) {
           url,
           {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+            generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
           },
           { timeout: 10000 }
         );
 
-        if (res.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return res.data.candidates[0].content.parts[0].text.trim();
+        const candidate = res.data?.candidates?.[0];
+        const rawText = candidate?.content?.parts?.[0]?.text;
+        if (rawText) {
+          const cleaned = ensureCompleteResponse(rawText);
+          if (cleaned) return cleaned;
         }
       } catch (err) {
         // Try next model/key

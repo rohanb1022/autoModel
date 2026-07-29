@@ -18,18 +18,22 @@ async function callGeminiRest(prompt) {
           url,
           {
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 2500 }
           },
-          { timeout: 12000 }
+          { timeout: 8000 }
         );
 
-        const rawText = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (rawText) {
+        const candidate = res.data?.candidates?.[0];
+        const finishReason = candidate?.finishReason;
+        const rawText = candidate?.content?.parts?.[0]?.text;
+
+        // Strictly verify finishReason is STOP (not MAX_TOKENS cutoff)
+        if (rawText && (finishReason === "STOP" || !finishReason)) {
           const cleaned = cleanExtractedCode(rawText);
           if (cleaned) return cleaned;
         }
       } catch (err) {
-        console.warn(`[CODE-GEN] Gemini key/model ${model} failed:`, err.message);
+        // Fallthrough to next key/model
       }
     }
   }
@@ -39,18 +43,19 @@ async function callGeminiRest(prompt) {
 function cleanExtractedCode(text) {
   if (!text) return null;
 
-  // Extract content between ```python ... ``` or ``` ... ```
+  // MUST have closed markdown backticks ```python ... ```
   const match = text.match(/```(?:python)?\s*([\s\S]*?)```/i);
-  let codeStr = match ? match[1].trim() : text.trim();
+  if (!match || !match[1]) return null; // Discard if code block was truncated mid-generation!
 
-  // Basic sanity check: verify code is complete and contains imports + model execution
-  if (
-    (codeStr.includes("import ") || codeStr.includes("from ")) &&
-    (codeStr.includes("fit") || codeStr.includes("predict") || codeStr.includes("torch") || codeStr.includes("model")) &&
-    !codeStr.endsWith("utf-") &&
-    !codeStr.endsWith("#")
-  ) {
-    return codeStr; // Return clean raw Python code for direct <pre><code> rendering
+  let codeStr = match[1].trim();
+
+  // Strict completeness verification: code must contain imports, fitting, and prediction/metrics
+  const hasImports = codeStr.includes("import ") || codeStr.includes("from ");
+  const hasFit = codeStr.includes(".fit(") || codeStr.includes("model(");
+  const hasMetrics = codeStr.includes("accuracy") || codeStr.includes("report") || codeStr.includes("print(");
+
+  if (hasImports && hasFit && hasMetrics) {
+    return codeStr; // Return complete raw Python code for direct <pre><code> rendering
   }
   return null;
 }
@@ -233,30 +238,22 @@ const generateModelCode = async (data) => {
   const isANN = bestModel.includes("ANN") || bestModel.includes("Neural Network") || bestModel.includes("PyTorch");
   const libraryName = isANN ? "PyTorch" : "scikit-learn";
 
-  const prompt = `OUTPUT ONLY PURE EXECUTABLE PYTHON CODE. DO NOT INCLUDE ANY INTRODUCTORY OR CONVERSATIONAL TEXT. DO NOT WRITE "Here is your script:".
+  const prompt = `OUTPUT ONLY PURE EXECUTABLE PYTHON CODE INSIDE \`\`\`python ... \`\`\`. DO NOT INCLUDE INTRO OR OUTRO TEXT.
 
-Generate complete, self-contained Python code using ${libraryName} for:
-Dataset name: ${datasetName}
-Problem type: ${problemType}
-Best model: ${bestModel}
-Target column: ${targetCol}
-Accuracy: ${acc}
+Generate complete Python code using ${libraryName} for:
+Dataset: ${datasetName}
+Problem Type: ${problemType}
+Best Model: ${bestModel}
+Target Column: ${targetCol}
+Accuracy: ${acc}`;
 
-Requirements:
-- import libraries
-- load dataset pd.read_csv("${datasetName}")
-- ColumnTransformer preprocessing
-- train_test_split (80/20)
-- model fitting
-- accuracy printing and classification_report`;
-
-  // 1. Primary: Try Gemini REST API with clean extraction
+  // 1. Primary: Try Gemini REST API with strict completion check
   const aiCode = await callGeminiRest(prompt);
   if (aiCode) {
     return aiCode;
   }
 
-  // 2. Guaranteed Fallback: High-Quality Production Python Inference Code
+  // 2. Guaranteed Fallback: Complete, Fully Executable Python Code
   return generateDeterministicPythonCode(data);
 };
 
