@@ -18,107 +18,143 @@ from rag.offline_engine import generate_offline_response, _classify_intent, _par
 load_dotenv()
 
 
+import random
+
 # ---------------------------------------------------------------------------
-# LLM Cascade -- all free providers, no payment needed
+# LLM Cascade -- all free providers, multi-key rotation to prevent 429 errors
 # ---------------------------------------------------------------------------
 
 def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     """
-    Primary: Gemini 1.5 Flash -- free tier, 15 req/min.
-    Uses pre-configured keys in the environment.
+    Primary: Gemini 2.0 Flash / 1.5 Flash via REST API.
+    Supports multi-key rotation (GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_API_KEY_3, etc.)
+    to handle 20+ concurrent users on 100% free tier without 429 rate limit errors.
     """
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY_2")
-    if not api_key:
+    api_keys = [
+        os.getenv(k) for k in [
+            "GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4", "GEMINI_API_KEY_5"
+        ] if os.getenv(k)
+    ]
+    if not api_keys:
         raise RuntimeError("GEMINI_API_KEY not set")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={api_key}"
-    headers = {"Content-Type": "application/json"}
-    
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": f"{system_prompt}\n\n{user_prompt}"}
-                ]
+    # Rotate keys randomly per request to distribute traffic across 20+ users
+    random.shuffle(api_keys)
+
+    models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    last_err = None
+
+    for api_key in api_keys:
+        for model_name in models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": f"{system_prompt}\n\n{user_prompt}"}
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 1024
+                }
             }
-        ],
-        "generationConfig": {
-            "temperature": 0.3,
-            "maxOutputTokens": 1024
-        }
-    }
-    
-    resp = requests.post(url, headers=headers, json=payload, timeout=20)
-    if resp.status_code == 200:
-        res_json = resp.json()
-        try:
-            return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except (KeyError, IndexError):
-            raise RuntimeError(f"Unexpected response structure from Gemini: {res_json}")
-    raise RuntimeError(f"Gemini returned {resp.status_code}: {resp.text[:200]}")
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=15)
+                if resp.status_code == 200:
+                    res_json = resp.json()
+                    return res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                elif resp.status_code == 429:
+                    print(f"[CHAT] Gemini 429 hit for key on model {model_name}. Retrying next key/model...")
+                    last_err = f"HTTP 429 Rate Limit on {model_name}"
+                else:
+                    last_err = f"HTTP {resp.status_code}: {resp.text[:100]}"
+            except Exception as e:
+                last_err = str(e)
+
+    raise RuntimeError(f"All Gemini keys/models failed. Last error: {last_err}")
 
 
 def _call_groq(system_prompt: str, user_prompt: str) -> str:
     """
-    Fallback 1: Groq Cloud -- free tier, 30 req/min for llama-3.1-8b-instant.
-    https://console.groq.com -- no credit card needed.
+    Fallback 1: Groq Cloud -- 30 req/min free tier.
+    Supports key rotation (GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3).
     """
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
+    api_keys = [
+        os.getenv(k) for k in ["GROQ_API_KEY", "GROQ_API_KEY_2", "GROQ_API_KEY_3"] if os.getenv(k)
+    ]
+    if not api_keys:
         raise RuntimeError("GROQ_API_KEY not set")
 
-    resp = requests.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "model": "llama-3.1-8b-instant",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "temperature": 0.3,
-            "max_tokens": 1024,
-        },
-        timeout=30,
-    )
-    if resp.status_code == 200:
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    raise RuntimeError(f"Groq returned {resp.status_code}: {resp.text[:200]}")
+    random.shuffle(api_keys)
+    models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+
+    for api_key in api_keys:
+        for model in models:
+            try:
+                resp = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 1024,
+                    },
+                    timeout=20,
+                )
+                if resp.status_code == 200:
+                    return resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception:
+                continue
+
+    raise RuntimeError("Groq failed on all keys/models")
 
 
 def _call_huggingface(system_prompt: str, user_prompt: str) -> str:
     """
-    Fallback 2: HuggingFace Inference API -- free tier.
-    Uses Mistral 7B Instruct which supports system prompts via [INST] format.
+    Fallback 2: Hugging Face Router API -- free tier.
     """
     hf_token = os.getenv("HF_API_TOKEN") or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
     if not hf_token:
         raise RuntimeError("HF_API_TOKEN / HF_TOKEN not set")
 
-    # Mistral Instruct format
-    formatted_prompt = f"[INST] {system_prompt}\n\n{user_prompt} [/INST]"
+    models = [
+        "Qwen/Qwen2.5-72B-Instruct",
+        "meta-llama/Llama-3.2-3B-Instruct",
+        "mistralai/Mistral-7B-Instruct-v0.3"
+    ]
 
-    resp = requests.post(
-        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
-        headers={"Authorization": f"Bearer {hf_token}"},
-        json={
-            "inputs": formatted_prompt,
-            "parameters": {"max_new_tokens": 512, "temperature": 0.3},
-        },
-        timeout=60,
-    )
-    if resp.status_code == 200:
-        data = resp.json()
-        if isinstance(data, list) and data:
-            text = data[0].get("generated_text", "")
-            # Strip the input prompt echo that HF sometimes returns
-            if "[/INST]" in text:
-                text = text.split("[/INST]")[-1]
-            return text.strip()
-    raise RuntimeError(f"HuggingFace returned {resp.status_code}")
+    for model in models:
+        try:
+            resp = requests.post(
+                f"https://api-inference.huggingface.co/models/{model}",
+                headers={"Authorization": f"Bearer {hf_token}"},
+                json={
+                    "inputs": f"[INST] {system_prompt}\n\n{user_prompt} [/INST]",
+                    "parameters": {"max_new_tokens": 512, "temperature": 0.3},
+                },
+                timeout=25,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if isinstance(data, list) and data:
+                    text = data[0].get("generated_text", "")
+                    if "[/INST]" in text:
+                        text = text.split("[/INST]")[-1]
+                    return text.strip()
+        except Exception:
+            continue
+
+    raise RuntimeError("HuggingFace failed on all models")
 
 
 def _call_ollama(system_prompt: str, user_prompt: str) -> str:
@@ -141,8 +177,8 @@ def _call_ollama(system_prompt: str, user_prompt: str) -> str:
 
 def _call_llm(system_prompt: str, user_prompt: str) -> str:
     """
-    Cascading LLM caller: tries Gemini -> Groq -> HuggingFace -> Ollama.
-    All tiers are completely free.
+    Cascading LLM caller: tries Gemini (with key rotation) -> Groq -> HuggingFace -> Ollama.
+    All tiers are completely free. Zero cost required.
     """
     providers = [
         ("Gemini", _call_gemini),

@@ -3,7 +3,6 @@ import numpy as np
 import os
 import requests
 import json
-import google.generativeai as genai
 
 def score_columns(df: pd.DataFrame):
     # Try AI-based detection first (Llama/Groq preferred)

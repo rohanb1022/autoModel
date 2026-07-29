@@ -454,22 +454,35 @@ def generate_insights(
 
     prompt += "Provide 4-5 direct, actionable bullet points formatted in clean markdown. Output should be easy to read for a business stakeholder."
 
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key:
-        try:
-            genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel("gemini-3.5-flash")
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    temperature=0.3,
-                    max_output_tokens=768,
-                )
-            )
-            if response.text:
-                return {"insights": response.text.strip()}
-        except Exception as e:
-            print(f"[INSIGHTS] Gemini error: {e}")
+    api_keys = [
+        os.getenv(k) for k in [
+            "GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GEMINI_API_KEY_4"
+        ] if os.getenv(k)
+    ]
+    if api_keys:
+        import random
+        random.shuffle(api_keys)
+        models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        for key in api_keys:
+            for model_name in models:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={key}"
+                    resp = http_requests.post(
+                        url,
+                        headers={"Content-Type": "application/json"},
+                        json={
+                            "contents": [{"parts": [{"text": prompt}]}],
+                            "generationConfig": {"temperature": 0.3, "maxOutputTokens": 768}
+                        },
+                        timeout=15
+                    )
+                    if resp.status_code == 200:
+                        res_json = resp.json()
+                        text = res_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        if text:
+                            return {"insights": text}
+                except Exception as e:
+                    print(f"[INSIGHTS] Gemini error on {model_name}: {e}")
 
     # Dynamic fallback — always works, no external dependency
     fallback_insights = f"### AI Insights Summary\n\n"
@@ -560,9 +573,15 @@ def chat(
     request: ChatRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    user_id = current_user["id"]
-    answer = ask_ai(user_id, request.question)
-    return {"response": answer}
+    try:
+        user_id = str(current_user.get("id") or current_user.get("_id") or "default_user")
+        answer = ask_ai(user_id, request.question)
+        return {"response": answer}
+    except Exception as e:
+        print(f"[CHAT ENDPOINT ERROR]: {e}")
+        from rag.offline_engine import generate_offline_response
+        fallback_ans = generate_offline_response(request.question, "")
+        return {"response": fallback_ans}
 
 
 # ----------------------------------------
