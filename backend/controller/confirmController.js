@@ -116,19 +116,29 @@ Rows: ${data.rows || "N/A"}, Columns: ${data.columns || "N/A"}
 
 Provide 3-4 clear bullet points covering performance assessment, data observation, and actionable next steps.`;
 
+          const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
           for (const key of keys) {
-            try {
-              const genAI = new GoogleGenerativeAI(key);
-              const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-              const result = await model.generateContent(prompt);
-              const text = await result.response.text();
-              if (text && text.trim()) {
-                generatedInsights = text.trim();
-                break;
+            for (const model_name of models) {
+              try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model_name}:generateContent?key=${key}`;
+                const resp = await axios.post(
+                  url,
+                  {
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.3, maxOutputTokens: 768 }
+                  },
+                  { timeout: 10000 }
+                );
+
+                if (resp.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                  generatedInsights = resp.data.candidates[0].content.parts[0].text.trim();
+                  break;
+                }
+              } catch (e) {
+                // Try next key/model
               }
-            } catch (e) {
-              // Try next key
             }
+            if (generatedInsights) break;
           }
         }
 

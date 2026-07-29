@@ -460,7 +460,7 @@ def generate_insights(
     if api_keys:
         import random
         random.shuffle(api_keys)
-        models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        models = ["gemini-2.5-flash", "gemini-2.0-flash"]
         for key in api_keys:
             for model_name in models:
                 try:

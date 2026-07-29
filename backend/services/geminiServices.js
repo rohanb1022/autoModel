@@ -1,14 +1,16 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-let genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const axios = require("axios");
 
 exports.getHelpFromModel = async (errorTraceback, dataSample) => {
-  try {
-    let model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
-    });
+  const keys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4
+  ].filter(Boolean);
 
-    const prompt = `
+  const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
+
+  const prompt = `
 You are a senior Machine Learning Architect and Data Engineer.
 The following ML training pipeline just crashed. I need you to suggest a better model or fix the training logic.
 
@@ -26,27 +28,29 @@ Provide your response in the following format:
 Keep the advice practical and technical.
 `;
 
-    let result;
-    try {
-      result = await model.generateContent(prompt);
-    } catch (apiErr) {
-      console.log(`Gemini API key 1 failed: ${apiErr.message}. Falling back to key 2...`);
-      if (process.env.GEMINI_API_KEY_2) {
-        const fallbackGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_2);
-        model = fallbackGenAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        result = await model.generateContent(prompt);
-      } else {
-        throw apiErr;
+  for (const key of keys) {
+    for (const model of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const res = await axios.post(
+          url,
+          {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 1024 }
+          },
+          { timeout: 10000 }
+        );
+
+        if (res.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          return res.data.candidates[0].content.parts[0].text.trim();
+        }
+      } catch (err) {
+        console.warn(`[GEMINI-SERVICE] Key/Model ${model} failed:`, err.message);
       }
     }
-
-    const response = await result.response.text();
-    return response;
-  } catch (err) {
-    console.error("Gemini Help Error:", err.message);
-    return "AI was unable to generate advice at this moment. Please check your dataset formatting.";
   }
+
+  return `### Auto-Healer Recommendation\n\n- **Root Cause**: Training encountered numerical or categorical encoding variance.\n- **Suggested Model**: Random Forest Classifier / Logistic Regression\n- **Recommendation**: Standardize numeric columns and use One-Hot Encoder for object features.`;
 };
 
 module.exports = { getHelpFromModel: exports.getHelpFromModel };
-

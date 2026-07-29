@@ -41,7 +41,7 @@ def _call_gemini(system_prompt: str, user_prompt: str) -> str:
     # Rotate keys randomly per request to distribute traffic across 20+ users
     random.shuffle(api_keys)
 
-    models = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    models = ["gemini-2.5-flash", "gemini-2.0-flash"]
     last_err = None
 
     for api_key in api_keys:
