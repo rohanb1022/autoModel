@@ -69,12 +69,20 @@ export default function Dashboard() {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.08 } }
+    visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.1 } }
   };
 
   const cardVariants = {
-    hidden: { y: 25, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: "spring", bounce: 0.3 } }
+    hidden: { y: 12, opacity: 0 },
+    visible: { 
+      y: 0, 
+      opacity: 1, 
+      transition: { 
+        type: "tween", 
+        ease: [0.16, 1, 0.3, 1], // A sleek exponential ease-out curve
+        duration: 0.5 
+      } 
+    }
   };
 
   if (loading) {
@@ -103,25 +111,25 @@ export default function Dashboard() {
         animate="visible"
       >
         {/* HEADER */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 border-b border-slate-100 pb-6">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b border-slate-200/70 pb-6 mb-8">
           <motion.div variants={cardVariants}>
-            <h1 className="text-4xl md:text-5xl font-black text-[#00000b] tracking-tighter">
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
               Aether<span className="text-[#4b41e1]">Intelligence</span> Control Room
             </h1>
-            <p className="text-slate-500 font-medium mt-1 text-sm md:text-base">Monitor dataset health, model competition progress, and hyperparameter tuning live.</p>
+            <p className="text-slate-500 mt-2 text-sm md:text-base">Monitor dataset health, model competition progress, and hyperparameter tuning live.</p>
           </motion.div>
 
-          <motion.div variants={cardVariants} className="flex flex-wrap gap-3 md:gap-4 items-center">
+          <motion.div variants={cardVariants} className="flex flex-wrap gap-4 items-center">
             {models.length > 0 && (
-              <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2.5 shadow-sm">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Run:</span>
+              <div className="flex items-center gap-3 bg-white border border-slate-200/70 rounded-xl px-4 py-2 shadow-sm focus-within:border-[#4b41e1]/50 focus-within:ring-2 focus-within:ring-[#4b41e1]/10 transition-all">
+                <span className="text-xs font-semibold text-slate-500">Active Run:</span>
                 <select
                   value={selectedModel ? selectedModel._id : ""}
                   onChange={(e) => {
                     const found = models.find(m => m._id === e.target.value);
                     if (found) setSelectedModel(found);
                   }}
-                  className="bg-transparent text-sm font-bold text-[#00000b] focus:outline-none cursor-pointer"
+                  className="bg-transparent text-sm font-medium text-slate-900 focus:outline-none cursor-pointer w-48 truncate"
                 >
                   {models.map(m => (
                     <option key={m._id} value={m._id}>
@@ -134,8 +142,8 @@ export default function Dashboard() {
 
             <button
               onClick={() => navigate("/upload")}
-              className="px-6 py-2.5 bg-[#4b41e1] rounded-full text-white text-sm font-bold hover:bg-indigo-700 hover:-translate-y-0.5 shadow-lg shadow-[#4b41e1]/20 transition-all duration-300">
-              + New AutoML Run
+              className="px-5 py-2 bg-[#4b41e1] rounded-xl text-white text-sm font-medium hover:bg-indigo-700 shadow-sm transition-all duration-200">
+              New AutoML Run
             </button>
           </motion.div>
         </header>
@@ -159,61 +167,70 @@ export default function Dashboard() {
         ) : (
           <>
             {/* OVERVIEW STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {/* Stat 1: Best Overall Model */}
-              <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Global Top Performance</p>
-                  <h3 className="text-2xl font-black text-[#00000b] tracking-tight truncate max-w-[180px]">
+              <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-slate-500">Global Top Performance</p>
+                  <h3 className="text-2xl font-semibold text-slate-900 tracking-tight truncate max-w-[150px]">
                     {best ? best.datasetName : "N/A"}
                   </h3>
-                  <p className="text-xs text-[#4b41e1] font-bold">{best ? best.bestModel : ""}</p>
+                  <p className="text-sm text-[#4b41e1] font-medium">{best ? best.bestModel : ""}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-3xl font-black text-[#4b41e1] tracking-tighter">
+                <div className="text-right flex flex-col items-end">
+                  <div className="text-3xl font-bold text-slate-900 tracking-tight">
                     {best ? (best.problemType === "clustering" ? best.accuracy.toFixed(3) : `${(best.accuracy * 100).toFixed(1)}%`) : "0%"}
                   </div>
-                  <p className="text-[9px] font-mono text-slate-400 uppercase">max score</p>
+                  <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full mt-1">max score</span>
                 </div>
               </motion.div>
 
               {/* Stat 2: Active Models Count */}
-              <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Runs</p>
-                  <h3 className="text-3xl font-black text-[#00000b] tracking-tighter">{models.length}</h3>
-                  <p className="text-xs text-slate-500 font-semibold">Trained databases</p>
+              <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-slate-500">Active Runs</p>
+                  <h3 className="text-3xl font-semibold text-slate-900 tracking-tight">{models.length}</h3>
+                  <p className="text-sm text-slate-500">Trained databases</p>
                 </div>
-                <div className="h-12 w-12 bg-[#4b41e1]/10 rounded-2xl flex items-center justify-center text-[#4b41e1]">
-                  <Box size={24} />
+                <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                  <Box size={24} strokeWidth={1.5} />
                 </div>
               </motion.div>
 
               {/* Stat 3: Avg Accuracy */}
-              <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg. Precision</p>
-                  <h3 className="text-3xl font-black text-[#00000b] tracking-tighter">
+              <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-6 shadow-sm flex items-center justify-between group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-slate-500">Avg. Precision</p>
+                  <h3 className="text-3xl font-semibold text-slate-900 tracking-tight">
                     {(models.reduce((a, b) => a + b.accuracy, 0) / models.length * (selectedModel?.problemType === "clustering" ? 1 : 100)).toFixed(selectedModel?.problemType === "clustering" ? 3 : 1)}
                     {selectedModel?.problemType !== "clustering" && "%"}
                   </h3>
-                  <p className="text-xs text-slate-500 font-semibold">Across all iterations</p>
+                  <p className="text-sm text-slate-500">Across all iterations</p>
                 </div>
-                <div className="h-12 w-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600">
-                  <TrendingUp size={24} />
+                <div className="h-12 w-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                  <TrendingUp size={24} strokeWidth={1.5} />
                 </div>
               </motion.div>
 
               {/* Stat 4: Dynamic Performance Flow Area Chart */}
-              <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-3xl p-4 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition-shadow">
-                <div className="flex justify-between items-center px-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Performance Flow</span>
-                  <span className="text-[9px] font-mono font-bold text-[#4b41e1] bg-[#4b41e1]/10 px-2 py-0.5 rounded-full">LIVE</span>
+              <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-5 shadow-sm overflow-hidden flex flex-col justify-between group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-xs font-medium text-slate-500">Performance Flow</span>
+                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                    LIVE
+                  </span>
                 </div>
-                <div className="h-14 w-full mt-2 -mb-2">
+                <div className="h-16 w-full -mx-1 -mb-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={models}>
-                      <Area type="monotone" dataKey="accuracy" stroke="#4b41e1" fill="rgba(75, 65, 225, 0.05)" strokeWidth={2.5} />
+                      <Area type="monotone" dataKey="accuracy" stroke="#4b41e1" fill="url(#colorUv)" strokeWidth={2} />
+                      <defs>
+                        <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4b41e1" stopOpacity={0.15}/>
+                          <stop offset="95%" stopColor="#4b41e1" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -227,46 +244,48 @@ export default function Dashboard() {
               <div className="lg:col-span-2 space-y-8">
                 
                 {/* CARD 1: MODEL COMPETITION LEADERBOARD */}
-                <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-[2rem] p-6 md:p-8 shadow-sm">
-                  <div className="flex justify-between items-center mb-6">
-                    <div className="space-y-1">
-                      <h3 className="font-black text-[#00000b] tracking-tight text-xl flex items-center gap-2">
-                        <BarChart2 className="text-[#4b41e1]" size={20} />
+                <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-6 md:p-8 shadow-sm">
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="space-y-1.5">
+                      <h3 className="font-semibold text-slate-900 tracking-tight text-lg flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-indigo-50 text-[#4b41e1]">
+                          <BarChart2 size={18} strokeWidth={2} />
+                        </div>
                         AutoML Competition Leaderboard
                       </h3>
-                      <p className="text-xs text-slate-500">Trained and compared models automatically</p>
+                      <p className="text-sm text-slate-500 ml-11">Trained and compared models automatically</p>
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {selectedModel.leaderboard && selectedModel.leaderboard.length > 0 ? (
                       selectedModel.leaderboard.map((item: any, idx: number) => {
                         const scorePct = selectedModel.problemType === "clustering" 
-                          ? (item.score + 1) / 2 * 100 // Silhouette goes -1 to 1, normalize to 0-100
+                          ? (item.score + 1) / 2 * 100 
                           : item.score * 100;
                         const isBest = item.model === selectedModel.bestModel;
                         
                         return (
-                          <div key={item.model} className="space-y-2">
-                            <div className="flex justify-between items-center text-sm font-semibold">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-400 font-mono">#{idx+1}</span>
-                                <span className={isBest ? "text-[#4b41e1] font-black" : "text-slate-700"}>{item.model}</span>
+                          <div key={item.model} className="space-y-2.5">
+                            <div className="flex justify-between items-center text-sm">
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-slate-400 font-mono w-4">#{idx+1}</span>
+                                <span className={`font-medium ${isBest ? "text-slate-900" : "text-slate-600"}`}>{item.model}</span>
                                 {isBest && (
-                                  <span className="bg-[#4b41e1]/10 border border-[#4b41e1]/20 text-[9px] font-black text-[#4b41e1] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                  <span className="bg-indigo-50 border border-indigo-100 text-[10px] font-semibold text-indigo-700 px-2 py-0.5 rounded-md uppercase tracking-wide">
                                     Best Model
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-3">
-                                <span className="text-xs font-mono text-slate-400">
+                                <span className={`text-sm font-semibold ${isBest ? "text-indigo-600" : "text-slate-500"}`}>
                                   {selectedModel.problemType === "clustering" 
                                     ? `Silhouette: ${item.score.toFixed(3)}` 
-                                    : `Acc: ${(item.score * 100).toFixed(1)}%`}
+                                    : `${(item.score * 100).toFixed(1)}%`}
                                 </span>
                               </div>
                             </div>
-                            <div className="w-full h-2.5 rounded-full bg-slate-50 border border-slate-100 overflow-hidden">
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                               <div 
                                 className={`h-full rounded-full transition-all duration-1000 ${isBest ? "bg-[#4b41e1]" : "bg-slate-300"}`} 
                                 style={{ width: `${scorePct}%` }}
@@ -275,11 +294,11 @@ export default function Dashboard() {
                             
                             {/* Rich metrics breakdown */}
                             {isBest && item.metrics && Object.keys(item.metrics).length > 0 && (
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
                                 {Object.entries(item.metrics).map(([key, val]: [string, any]) => (
-                                  <div key={key} className="bg-slate-50 border border-slate-100 rounded-lg p-2 text-center">
-                                    <p className="text-[8px] uppercase font-bold text-slate-400 tracking-wider">{key}</p>
-                                    <p className="text-xs font-mono font-bold text-slate-800">
+                                  <div key={key} className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex flex-col items-start">
+                                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">{key}</p>
+                                    <p className="text-sm font-semibold text-slate-900">
                                       {typeof val === 'number' && key !== 'silhouette' && key !== 'rmse' && key !== 'mae'
                                         ? `${(val * 100).toFixed(1)}%` 
                                         : typeof val === 'number' ? val.toFixed(3) : val}
@@ -293,16 +312,18 @@ export default function Dashboard() {
                       })
                     ) : (
                       // Fallback for older entries
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center text-sm font-semibold">
-                          <span className="text-[#4b41e1] font-black">{selectedModel.bestModel} (Ad Adopted Model)</span>
-                          <span className="text-xs font-mono text-slate-500">
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-slate-900 font-medium">{selectedModel.bestModel} (Ad Adopted Model)</span>
+                          <span className="text-sm font-semibold text-indigo-600">
                             {selectedModel.problemType === "clustering" 
                               ? `Silhouette: ${selectedModel.accuracy.toFixed(3)}` 
-                              : `Acc: ${(selectedModel.accuracy * 100).toFixed(1)}%`}
+                              : `${(selectedModel.accuracy * 100).toFixed(1)}%`}
                           </span>
                         </div>
-                        <div className="w-full h-2.5 rounded-full bg-[#4b41e1]" />
+                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                           <div className="h-full rounded-full bg-[#4b41e1] w-full" />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -363,34 +384,36 @@ export default function Dashboard() {
                 </motion.div>
 
                 {/* CARD 3: FEATURE IMPORTANCE */}
-                <motion.div variants={cardVariants} className="bg-white border border-slate-100 rounded-[2rem] p-6 md:p-8 shadow-sm">
-                  <div className="space-y-1 mb-6">
-                    <h3 className="font-black text-[#00000b] tracking-tight text-xl flex items-center gap-2">
-                      <BarChart2 className="text-[#4b41e1]" size={20} />
+                <motion.div variants={cardVariants} className="bg-white border border-slate-200/70 rounded-2xl p-6 md:p-8 shadow-sm">
+                  <div className="space-y-1.5 mb-8 flex flex-col">
+                    <h3 className="font-semibold text-slate-900 tracking-tight text-lg flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-indigo-50 text-[#4b41e1]">
+                        <BarChart2 size={18} strokeWidth={2} />
+                      </div>
                       Feature Importance
                     </h3>
-                    <p className="text-xs text-slate-500">Key features driving the best model's predictions</p>
+                    <p className="text-sm text-slate-500 ml-11">Key features driving the best model's predictions</p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {selectedModel.topFeatures && selectedModel.topFeatures.length > 0 ? (
                       selectedModel.topFeatures.map((feat: any) => {
                         const importancePct = (feat.importance * 100).toFixed(1);
                         return (
                           <div key={feat.feature} className="flex items-center gap-4">
-                            <span className="text-xs font-bold text-slate-700 w-32 truncate text-left">{feat.feature}</span>
-                            <div className="flex-1 h-3 rounded-full bg-slate-50 border border-slate-100 overflow-hidden">
+                            <span className="text-sm font-medium text-slate-700 w-32 truncate text-left" title={feat.feature}>{feat.feature}</span>
+                            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
                               <div 
-                                className="h-full rounded-full bg-gradient-to-r from-[#4b41e1] to-indigo-500 transition-all duration-1000" 
+                                className="h-full rounded-full bg-[#4b41e1] transition-all duration-1000" 
                                 style={{ width: `${feat.importance * 100}%` }}
                               />
                             </div>
-                            <span className="text-xs font-mono font-bold text-slate-500 w-12 text-right">{importancePct}%</span>
+                            <span className="text-sm font-semibold text-slate-600 w-12 text-right">{importancePct}%</span>
                           </div>
                         );
                       })
                     ) : (
-                      <div className="p-6 text-center rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 text-sm font-semibold">
+                      <div className="p-6 text-center rounded-xl bg-slate-50 border border-slate-200/60 text-slate-500 text-sm font-medium">
                         Feature importances are not available for this model.
                       </div>
                     )}
