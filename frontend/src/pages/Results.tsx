@@ -1,74 +1,16 @@
-// import DashboardLayout from "@/components/DashboardLayout";
-// import { Target, Cpu, Database, CheckCircle } from "lucide-react";
-
-// const results = [
-//   { label: "Target Column", value: "churn", icon: Target },
-//   { label: "Problem Type", value: "Binary Classification", icon: Database },
-//   { label: "Best Model", value: "Random Forest", icon: Cpu },
-//   { label: "Accuracy Score", value: "94.7%", icon: CheckCircle },
-// ];
-
-// export default function Results() {
-//   return (
-//     <DashboardLayout>
-//       <div className="space-y-8">
-//         <div>
-//           <h1 className="text-2xl font-bold text-white tracking-tight">Model Results</h1>
-//           <p className="text-sm text-muted-foreground mt-1">Performance summary of the best trained model.</p>
-//         </div>
-//         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-white">
-//           {results.map((r) => (
-//             <div key={r.label} className="glass rounded-xl p-6 flex items-start gap-4">
-//               <div className="h-11 w-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-//                 <r.icon className="h-5 w-5 text-primary" />
-//               </div>
-//               <div>
-//                 <p className="text-xs text-muted-foreground font-medium">{r.label}</p>
-//                 <p className="text-xl font-bold mt-1">{r.value}</p>
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//         <div className="glass rounded-xl text-white p-6">
-//           <h2 className="font-semibold mb-4">Model Comparison</h2>
-//           <div className="space-y-3">
-//             {[
-//               { name: "Random Forest", acc: 94.7 },
-//               { name: "XGBoost", acc: 93.2 },
-//               { name: "Logistic Regression", acc: 88.5 },
-//               { name: "SVM", acc: 86.1 },
-//             ].map((m) => (
-//               <div key={m.name} className="flex items-center gap-4">
-//                 <span className="text-sm w-40 text-muted-foreground">{m.name}</span>
-//                 <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
-//                   <div className="h-full rounded-full bg-primary" style={{ width: `${m.acc}%` }} />
-//                 </div>
-//                 <span className="text-sm font-medium w-14 text-right">{m.acc}%</span>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-//     </DashboardLayout>
-//   );
-// }
-
-
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import API from "@/api/axios";
-import { Cpu, Copy, CheckCircle, Terminal, Code2, Zap, LayoutDashboard } from "lucide-react";
+import { Cpu, Copy, CheckCircle, Terminal, Code2, Zap, LayoutDashboard, Download, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
-
 
 export default function Results() {
   const [latestModel, setLatestModel] = useState(null);
   const [generatedCode, setGeneratedCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -98,7 +40,9 @@ export default function Results() {
         datasetName: latestModel.datasetName,
         problemType: latestModel.problemType,
         bestModel: latestModel.bestModel,
-        accuracy: latestModel.accuracy
+        accuracy: latestModel.accuracy,
+        targetColumn: latestModel.targetColumn,
+        datasetId: latestModel.datasetId || latestModel._id
       });
       setGeneratedCode(res.data.code);
     } catch (err) {
@@ -112,6 +56,63 @@ export default function Results() {
     navigator.clipboard.writeText(generatedCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadNotebook = () => {
+    if (!generatedCode || !latestModel) return;
+
+    const notebook = {
+      nbformat: 4,
+      nbformat_minor: 2,
+      metadata: {
+        language_info: { name: "python" },
+        colab: { name: `${latestModel.datasetName}_model.ipynb`, provenance: [] }
+      },
+      cells: [
+        {
+          cell_type: "markdown",
+          metadata: {},
+          source: [
+            `# ${latestModel.bestModel} Training & Inference Notebook\n`,
+            `- **Dataset:** \`${latestModel.datasetName}\`\n`,
+            `- **Target Column:** \`${latestModel.targetColumn || "target"}\`\n`,
+            `- **Problem Type:** \`${latestModel.problemType}\`\n`,
+            `*Generated and verified via AutoModel Sandbox*`
+          ]
+        },
+        {
+          cell_type: "code",
+          execution_count: null,
+          metadata: {},
+          outputs: [],
+          source: [
+            "# Step 1: Install & import required libraries\n",
+            "!pip install -q pandas numpy scikit-learn xgboost\n",
+            "# Optional: If running in Google Colab, upload your CSV file:\n",
+            "# from google.colab import files\n",
+            "# uploaded = files.upload()\n"
+          ]
+        },
+        {
+          cell_type: "code",
+          execution_count: null,
+          metadata: {},
+          outputs: [],
+          source: [generatedCode]
+        }
+      ]
+    };
+
+    const blob = new Blob([JSON.stringify(notebook, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const cleanName = (latestModel.datasetName || "model").replace(/\.[^/.]+$/, "");
+    a.download = `${cleanName}_training.ipynb`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const containerVariants = {
@@ -139,7 +140,7 @@ export default function Results() {
             onClick={() => navigate("/upload")}
             className="px-8 py-3 bg-[#00000b] rounded-xl text-white font-bold hover:bg-slate-900 shadow-xl shadow-black/10 transition-all hover:scale-105 active:scale-95"
           >
-            Start Training
+            Train a Model
           </button>
         </div>
       </DashboardLayout>
@@ -148,55 +149,50 @@ export default function Results() {
 
   return (
     <DashboardLayout>
-
       <motion.div
-        className="max-w-5xl mx-auto space-y-6 md:space-y-8 py-6 md:p-12 relative z-10"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
+        className="max-w-7xl mx-auto space-y-6 md:space-y-8"
       >
-        {/* HEADER */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 md:gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-emerald-600 font-mono text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase">System Ready</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-5xl font-black text-[#00000b] tracking-tighter">
-              Deployment <span className="text-[#4b41e1]">Hub</span>
-            </h1>
-            <p className="text-slate-500 font-medium mt-2 max-w-lg text-sm md:text-base leading-relaxed">
-              Generate production-ready inference code for your optimized, high-performance models.
-            </p>
-          </div>
+        {/* HEADER SECTION */}
+        <motion.div variants={itemVariants} className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-black text-[#00000b] tracking-tight">Deployment & Code</h1>
+          <p className="text-slate-500 font-medium text-xs md:text-sm">
+            Production-ready script for your trained <span className="text-[#4b41e1] font-semibold">{latestModel.bestModel}</span>.
+          </p>
         </motion.div>
 
-        {/* MODEL CARD */}
-        <motion.div
-          variants={itemVariants}
-          className="relative overflow-hidden rounded-[2rem] bg-white shadow-[0_10px_40px_rgba(75,65,225,0.06)] border border-slate-100 p-6 md:p-8 group"
-        >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#4b41e1]/5 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none" />
-
-          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 relative z-10">
-            <div className="h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-[#4b41e1]/10 flex items-center justify-center shadow-inner border border-[#4b41e1]/20 shrink-0 group-hover:scale-105 transition-transform">
-              <Cpu className="text-[#4b41e1]" size={32} md-size={40} />
+        {/* METRICS ROW */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 shadow-sm flex flex-col justify-between">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Selected Dataset</p>
+            <p className="text-lg md:text-xl font-black text-[#00000b] truncate" title={latestModel.datasetName}>
+              {latestModel.datasetName}
+            </p>
+            <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <span className="w-2 h-2 rounded-full bg-[#4b41e1]" />
+              Target: <span className="text-[#00000b] font-bold">{latestModel.targetColumn || "Auto-detected"}</span>
             </div>
+          </div>
 
-            <div className="flex-1 text-center md:text-left overflow-hidden w-full">
-              <h3 className="text-xl md:text-2xl font-bold text-[#00000b] tracking-tight mb-2 truncate">{latestModel.datasetName}</h3>
-              <div className="flex flex-wrap justify-center md:justify-start gap-2 md:gap-3">
-                <span className="px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-600 shadow-sm">
-                  {latestModel.problemType}
-                </span>
-                <span className="px-3 py-1.5 rounded-full bg-[#4b41e1]/10 border border-[#4b41e1]/20 text-[10px] font-bold text-[#4b41e1] shadow-sm">
-                  {latestModel.bestModel}
-                </span>
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 shadow-sm flex flex-col justify-between">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Optimal Model Architecture</p>
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[#4b41e1]">
+                <Cpu size={24} />
+              </div>
+              <div>
+                <p className="text-lg md:text-xl font-black text-[#00000b]">{latestModel.bestModel}</p>
+                <p className="text-xs text-slate-400 font-medium capitalize">{latestModel.problemType} task</p>
               </div>
             </div>
+          </div>
 
-            <div className="text-center bg-slate-50 md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none w-full md:w-auto border border-slate-100 md:border-none">
-              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 md:p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#4b41e1]/10 to-transparent rounded-bl-full pointer-events-none" />
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
                 {latestModel.problemType === "clustering" ? "Silhouette Score" : "Accuracy Score"}
               </p>
               <div className="text-4xl md:text-5xl font-black text-[#00000b] tracking-tighter">
@@ -217,7 +213,7 @@ export default function Results() {
         <motion.div variants={itemVariants} className="space-y-4 md:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h2 className="text-lg md:text-xl font-bold text-[#00000b] flex items-center gap-2">
-              <Terminal size={18} md-size={20} className="text-[#4b41e1]" />
+              <Terminal size={18} className="text-[#4b41e1]" />
               Inference Code <span className="text-slate-400 font-medium text-xs md:text-sm ml-2">Python (scikit-learn)</span>
             </h2>
             <button
@@ -226,7 +222,7 @@ export default function Results() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#00000b] text-white px-5 md:px-6 py-2.5 md:py-3 rounded-xl font-bold hover:-translate-y-0.5 shadow-xl shadow-black/10 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100"
             >
               {loading ? <Zap size={18} className="animate-spin text-[#4b41e1]" /> : <Code2 size={18} />}
-              {loading ? "Compiling..." : "Generate Code"}
+              {loading ? "Verifying in Sandbox..." : "Generate & Verify Code"}
             </button>
           </div>
 
@@ -238,19 +234,36 @@ export default function Results() {
                 exit={{ opacity: 0, y: -20 }}
                 className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm"
               >
-                <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200">
-                  <div className="flex gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <ShieldCheck size={12} className="text-emerald-600" />
+                      Sandbox Verified
+                    </span>
                   </div>
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#4b41e1] transition-colors"
-                  >
-                    {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                    <span className="hidden xs:inline">{copied ? "Copied" : "Copy Source"}</span>
-                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleDownloadNotebook}
+                      title="Download as Jupyter Notebook for Google Colab"
+                      className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-[#4b41e1] bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Download size={14} className="text-[#4b41e1]" />
+                      <span>Download .ipynb (Colab)</span>
+                    </button>
+                    <button
+                      onClick={handleCopy}
+                      className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#4b41e1] transition-colors"
+                    >
+                      {copied ? <CheckCircle size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                      <span className="hidden xs:inline">{copied ? "Copied" : "Copy Source"}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="p-4 md:p-6 overflow-x-auto scrollbar-hide">

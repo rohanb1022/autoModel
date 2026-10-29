@@ -1,19 +1,23 @@
 <p align="center">
   <h1 align="center">🤖 AutoModel</h1>
   <p align="center">
-    <strong>An end-to-end Automated Machine Learning Platform</strong><br/>
-    Upload a CSV → Get a trained, optimized model with full explainability & AI insights — zero ML expertise required.
+    <strong>An End-to-End Automated Machine Learning & Self-Healing Platform</strong><br/>
+    Upload a CSV → Profile & Clean → AI Target Detection → AutoML Competition → Hyperparameter Optimization → Sandbox Verified Code Generation & Google Colab Export — zero ML expertise required.
   </p>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" />
-  <img src="https://img.shields.io/badge/Express-5-000000?logo=express" />
+  <img src="https://img.shields.io/badge/React-18.3-61DAFB?logo=react" />
+  <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript" />
+  <img src="https://img.shields.io/badge/Express-5.0-000000?logo=express" />
   <img src="https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi" />
-  <img src="https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb" />
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python" />
-  <img src="https://img.shields.io/badge/Optuna-HPO-blue" />
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python" />
+  <img src="https://img.shields.io/badge/MongoDB-Atlas_GridFS-47A248?logo=mongodb" />
+  <img src="https://img.shields.io/badge/Optuna-Bayesian_HPO-blue" />
+  <img src="https://img.shields.io/badge/Groq-Llama_3.3_70B-f55036" />
   <img src="https://img.shields.io/badge/Gemini-AI_Insights-8E75B2" />
+  <img src="https://img.shields.io/badge/ChromaDB-Vector_RAG-orange" />
+  <img src="https://img.shields.io/badge/Sandbox-Self_Healing_Code-green" />
 </p>
 
 ---
@@ -22,1077 +26,746 @@
 
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
-- [End-to-End Data Flow](#end-to-end-data-flow)
-- [Feature Breakdown](#feature-breakdown)
-  - [1. Dataset Upload & Storage](#1-dataset-upload--storage)
-  - [2. Dataset Profiling Engine](#2-dataset-profiling-engine)
-  - [3. Automated Data Cleaning](#3-automated-data-cleaning)
-  - [4. AI-Powered Target Column Detection](#4-ai-powered-target-column-detection)
-  - [5. Exploratory Data Analysis (EDA)](#5-exploratory-data-analysis-eda)
+- [End-to-End Workflow](#end-to-end-workflow)
+- [Comprehensive Feature Breakdown](#comprehensive-feature-breakdown)
+  - [1. Dataset Upload & GridFS Storage](#1-dataset-upload--gridfs-storage)
+  - [2. Dataset Profiling & Data Quality Audit](#2-dataset-profiling--data-quality-audit)
+  - [3. Automated Data Cleaning & Type Inference](#3-automated-data-cleaning--type-inference)
+  - [4. AI + Heuristic Target Column Detection](#4-ai--heuristic-target-column-detection)
+  - [5. Exploratory Data Analysis (EDA) Charts](#5-exploratory-data-analysis-eda-charts)
   - [6. AutoML Model Competition](#6-automl-model-competition)
-  - [7. Hyperparameter Optimization (Optuna)](#7-hyperparameter-optimization-optuna)
-  - [8. Model Explainability](#8-model-explainability)
+  - [7. Hyperparameter Optimization with Optuna](#7-hyperparameter-optimization-with-optuna)
+  - [8. Model Explainability & Feature Importance](#8-model-explainability--feature-importance)
   - [9. AI Insights Generation](#9-ai-insights-generation)
   - [10. Auto-Healer (Self-Repairing Pipeline)](#10-auto-healer-self-repairing-pipeline)
-  - [11. RAG Chatbot](#11-rag-chatbot)
-  - [12. Visualization Dashboard](#12-visualization-dashboard)
-  - [13. Authentication & Payments](#13-authentication--payments)
-  - [14. System Messages & Audit Log](#14-system-messages--audit-log)
-- [ML Models Used & Purpose](#ml-models-used--purpose)
-- [LLM Architecture & Cascade Strategy](#llm-architecture--cascade-strategy)
+  - [11. In-App Sandbox Execution & Self-Healing Code Generator](#11-in-app-sandbox-execution--self-healing-code-generator)
+  - [12. Google Colab Integration & .ipynb Notebook Export](#12-google-colab-integration--ipynb-notebook-export)
+  - [13. RAG Chatbot with ChromaDB Memory](#13-rag-chatbot-with-chromadb-memory)
+  - [14. Visualization Gallery & Chart Insights](#14-visualization-gallery--chart-insights)
+  - [15. Authentication & Razorpay Payments](#15-authentication--razorpay-payments)
+  - [16. System Audit Log & Message History](#16-system-audit-log--message-history)
+- [Machine Learning Algorithms & Libraries](#machine-learning-algorithms--libraries)
+- [LLM Multi-Tier Cascade & Token Preservation Strategy](#llm-multi-tier-cascade--token-preservation-strategy)
+- [Core Functions & Technical Working](#core-functions--technical-working)
+  - [ML Backend Functions (`backend-ml/src/`)](#ml-backend-functions-backend-mlsrc)
+  - [RAG & Vector Memory Functions (`backend-ml/rag/`)](#rag--vector-memory-functions-backend-mlrag)
+  - [Node.js Backend Controllers & Services (`backend/`)](#nodejs-backend-controllers--services-backend)
+  - [Frontend Hooks & Page Handlers (`frontend/src/`)](#frontend-hooks--page-handlers-frontendsrc)
+- [Complete API Reference](#complete-api-reference)
+  - [Node.js Gateway Endpoints (Port 5000)](#nodejs-gateway-endpoints-port-5000)
+  - [Python ML Engine Endpoints (Port 8000)](#python-ml-engine-endpoints-port-8000)
+- [Database Schemas & Data Models](#database-schemas--data-models)
 - [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Database Schema](#database-schema)
-- [API Reference](#api-reference)
-- [Security & Production Hardening](#security--production-hardening)
+- [Repository Structure](#repository-structure)
 - [Local Development Setup](#local-development-setup)
 - [Deployment Guide](#deployment-guide)
 - [Environment Variables](#environment-variables)
+- [Security & Production Hardening](#security--production-hardening)
 
 ---
 
 ## Overview
 
-**AutoModel** is a production-grade, full-stack AutoML platform that automates the entire machine learning lifecycle. A user simply uploads a CSV file, and the system:
+**AutoModel** is a production-grade, enterprise-ready Automated Machine Learning (AutoML) platform. It allows anyone — from students to data scientists — to upload raw CSV files and automatically obtain:
 
-1. **Profiles** the dataset for quality issues (missing values, duplicates, ID columns, class imbalance, data leakage risks)
-2. **Cleans** the data automatically (imputation, deduplication, formatted number parsing)
-3. **Detects** the best target column using an AI-assisted scoring algorithm
-4. **Trains** 5 competing ML models simultaneously (Logistic Regression, Random Forest, Gradient Boosting, XGBoost, LightGBM)
-5. **Optimizes** the best model's hyperparameters using Optuna (10-trial Bayesian search with 3-fold CV)
-6. **Explains** which features drive predictions via normalized feature importance
-7. **Generates** natural-language AI insights using Gemini 3.5 Flash
-8. **Self-heals** if any pipeline crash occurs — an LLM cascade generates Python repair code automatically
-9. **Presents** everything through a professional React dashboard with EDA charts, leaderboards, and a RAG chatbot
-
-The entire system is designed to be explainable end-to-end in a technical interview.
+1. **In-depth profiling** of data quality, null values, cardinality, and data leakage risks.
+2. **Automated cleaning** with intelligent imputation, deduplication, and numerical currency/unit parsing.
+3. **AI target detection** identifying whether the dataset represents classification, regression, or clustering.
+4. **Multi-model benchmark competition** evaluating up to 5 competitive machine learning algorithms simultaneously.
+5. **Bayesian hyperparameter optimization (HPO)** via Optuna to tune the champion model.
+6. **Feature importance & explainability** detailing which drivers dictate predictions.
+7. **Production code generation with in-app sandbox verification**: Generates Python scripts, runs them in an isolated test environment against real dataset slices, catches tracebacks, and automatically self-heals using open-source models (Groq Llama 3.3 70B / Ollama) without burning Gemini API tokens.
+8. **1-Click Google Colab Notebook Export (`.ipynb`)** for instant cloud execution.
+9. **Interactive RAG chatbot** that answers queries about your models, metrics, and dataset memory.
 
 ---
 
 ## System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                         CLIENT (Browser)                                │
-│   React 18 + TypeScript + Vite + TailwindCSS + Shadcn/UI + Recharts    │
-│   Three.js (3D Hero) • Framer Motion • React Router v6                 │
-│   Deployed on: Vercel                                                   │
-└──────────────────────┬───────────────────────────────────────────────────┘
-                       │  REST API (JSON + JWT Bearer Token)
-                       ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                    NODE.JS BACKEND (Express 5)                          │
-│   • Authentication (bcrypt + JWT)         Port: 5000                    │
-│   • File upload (Multer → MongoDB GridFS)                               │
-│   • Rate limiting (express-rate-limit)                                  │
-│   • Razorpay payment integration                                        │
-│   • Proxies ML requests to Python backend                               │
-│   • Stores ModelRun + SystemMessage in MongoDB                          │
-│   • Background AI insight generation                                    │
-│   Deployed on: Render                                                   │
-└──────────────────────┬───────────────────────────────────────────────────┘
-                       │  Internal HTTP (Authorization header forwarded)
-                       ▼
-┌──────────────────────────────────────────────────────────────────────────┐
-│                  PYTHON ML BACKEND (FastAPI)                            │
-│   • Dataset profiling & EDA             Port: 8000                      │
-│   • Data cleaning & preprocessing                                       │
-│   • AutoML model competition (scikit-learn, XGBoost, LightGBM)          │
-│   • Optuna hyperparameter optimization                                  │
-│   • Feature importance explainability                                   │
-│   • AI insights (Gemini 3.5 Flash)                                      │
-│   • Auto-healer (LLM-powered self-repair)                               │
-│   • RAG chatbot (ChromaDB + sentence-transformers + LLM cascade)        │
-│   Deployed on: HuggingFace Spaces (Docker)                              │
-└──────────────────────┬───────────────────────────────────────────────────┘
-                       │
-          ┌────────────┼────────────────┐
-          ▼            ▼                ▼
-┌──────────────┐ ┌──────────────┐ ┌───────────────────┐
-│ MongoDB Atlas│ │  ChromaDB    │ │ LLM Cascade       │
-│ (GridFS +    │ │ (Vector DB)  │ │ Gemini → Groq →   │
-│  Collections)│ │ Per-user     │ │ HuggingFace →     │
-│              │ │ RAG memory   │ │ Ollama → Offline   │
-└──────────────┘ └──────────────┘ └───────────────────┘
-```
-
-### Why Three Services?
-
-| Service | Responsibility | Why Separate? |
-|---|---|---|
-| **Frontend** (React) | UI rendering, routing, user interactions | Deployed on Vercel CDN for global edge performance |
-| **Node Backend** (Express) | Auth, file storage, DB persistence, payment processing | Handles business logic, user sessions, and serves as the API gateway |
-| **ML Backend** (FastAPI) | All ML computation, model training, AI features | Requires Python ML ecosystem (scikit-learn, XGBoost, Optuna, etc.) and benefits from Docker isolation on HuggingFace Spaces |
-
----
-
-## End-to-End Data Flow
-
-Below is the complete lifecycle of a dataset from upload to dashboard visualization:
-
-```
-                                     USER
-                                       │
-                                  ① Upload CSV
-                                       │
-                                       ▼
-                              ┌─────────────────┐
-                              │   React Upload   │
-                              │   Page (Multer)  │
-                              └────────┬─────────┘
-                                       │ POST /api/upload (multipart/form-data)
-                                       ▼
-                              ┌─────────────────┐
-                              │  Node Backend   │
-                              │  uploadController│
-                              └────────┬─────────┘
-                                       │
-                        ② Store CSV in MongoDB GridFS
-                                       │
-                                       ▼
-                              ┌─────────────────┐
-                              │   MongoDB Atlas  │  ← datasets.files + datasets.chunks
-                              └────────┬─────────┘
-                                       │
-                        ③ POST /analyze (dataset_id)
-                                       │
-                                       ▼
-                              ┌─────────────────┐
-                              │  FastAPI /analyze │
-                              │                  │
-                              │  a) Download CSV │ ← fetches from GridFS via Node API
-                              │     from GridFS  │
-                              │  b) basic_cleaning│ ← impute, dedup, parse numbers
-                              │  c) score_columns│ ← AI + heuristic target detection
-                              │  d) DatasetProfiler│ ← quality report
-                              │  e) Generate EDA │ ← 5 plot types saved as PNGs
-                              └────────┬─────────┘
-                                       │
-                              Return: suggested_target, problem_type,
-                                      profile_report, ranked_suggestions
-                                       │
-                              ┌────────▼─────────┐
-                              │  User Confirms   │ ← user picks/overrides target column
-                              │  Target Column   │
-                              └────────┬─────────┘
-                                       │ POST /api/upload/confirm-target
-                                       ▼
-                              ┌─────────────────┐
-                              │  Node Backend   │
-                              │ confirmController│
-                              └────────┬─────────┘
-                                       │ POST /confirm-target (to FastAPI)
-                                       ▼
-                              ┌─────────────────────────────────┐
-                              │  FastAPI /confirm-target         │
-                              │                                  │
-                              │  a) Download CSV from GridFS     │
-                              │  b) basic_cleaning               │
-                              │  c) DatasetProfiler              │
-                              │  d) prepare_data()               │
-                              │     • Subsample to 10K rows      │
-                              │     • Drop constant/ID/high-card │
-                              │     • One-hot encode             │
-                              │     • 80/20 train/test split     │
-                              │     • StandardScaler             │
-                              │  e) train_models()               │
-                              │     • 5 models compete           │
-                              │     • Full metrics computed      │
-                              │     • Best model selected        │
-                              │     • Optuna HPO (10 trials)     │
-                              │     • Best model saved to .pkl   │
-                              │  f) ModelExplainer               │
-                              │     • Feature importance         │
-                              │  g) store_training_memory()      │
-                              │     • Embed → ChromaDB (RAG)     │
-                              └────────┬────────────────────────┘
-                                       │
-                     ④ Return: best_model, score, leaderboard,
-                        optuna_results, explain_report, profile_report,
-                        system_messages (auto-heal events)
-                                       │
-                              ┌────────▼──────────┐
-                              │  Node Backend     │
-                              │  • Save ModelRun  │ ← MongoDB (all results persisted)
-                              │  • Save SystemMsgs│
-                              │  • Background:    │
-                              │    POST /generate- │
-                              │    insights        │ ← Gemini generates natural-language AI insights
-                              │  • Update ModelRun│
-                              │    with insights   │
-                              └────────┬──────────┘
-                                       │
-                     ⑤ Response sent to frontend immediately
-                        (insights generated async in background)
-                                       │
-                              ┌────────▼──────────┐
-                              │  React Dashboard  │
-                              │                   │
-                              │  • Results Page   │ ← model, score, leaderboard
-                              │  • Visualizations │ ← EDA plots with AI commentary
-                              │  • Insights Page  │ ← Gemini-generated markdown
-                              │  • Chatbot        │ ← RAG-powered Q&A about results
-                              │  • System Messages│ ← auto-heal audit trail
-                              └───────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   CLIENT (Browser)                                     │
+│  React 18.3 + TypeScript + Vite + TailwindCSS + Shadcn/UI + Recharts + Framer Motion   │
+│  Interactive 3D Hero (Three.js) • Markdown Rendering • Jupyter Notebook (.ipynb) Export│
+│  Deployed on: Vercel                                                                   │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ REST API (JSON + JWT Bearer Token)
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                           NODE.JS API GATEWAY (Express 5)                              │
+│  • Port: 5000                                                                          │
+│  • User Authentication (bcrypt password hashing, JWT signed sessions)                 │
+│  • File Upload & Storage (Multer stream → MongoDB Atlas GridFS chunks)                 │
+│  • Rate Limiting (Tiered express-rate-limit)                                           │
+│  • Payment Processing (Razorpay order creation & HMAC-SHA256 signature verification)   │
+│  • Reverse Proxy to Python ML Backend with auth header forwarding                      │
+│  • Persistent Metadata (ModelRun & SystemMessage MongoDB collections)                  │
+│  • Fallback Code Generation Service with Groq & Gemini Cascades                        │
+│  Deployed on: Render                                                                   │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ Internal HTTP / Forwarded Bearer Token
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                            PYTHON ML ENGINE (FastAPI)                                  │
+│  • Port: 8000 (Python 3.11 + Uvicorn)                                                  │
+│  • Profiling & EDA Engine (Pandas, Matplotlib, Seaborn)                                │
+│  • Data Cleaner & Pipeline Preprocessor (Scikit-Learn ColumnTransformer)               │
+│  • AutoML Benchmark Competition (Scikit-Learn, XGBoost, LightGBM, PyTorch)             │
+│  • Bayesian Hyperparameter Tuner (Optuna TPESampler)                                   │
+│  • Model Explainer & Normalized Feature Importance                                     │
+│  • Sandboxed Execution Engine (Subprocess verification & auto-healer)                  │
+│  • RAG Chatbot Vector Database (ChromaDB + sentence-transformers/all-MiniLM-L6-v2)     │
+│  • Open-Source LLM Integration (Groq LPU, Ollama, HuggingFace, Gemini Flash)           │
+│  Deployed on: HuggingFace Spaces (Docker) / Local Environment                          │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Feature Breakdown
+## End-to-End Workflow
 
-### 1. Dataset Upload & Storage
-
-**Files:** `backend/controller/uploadController.js`, `backend/routes/uploadRoutes.js`
-
-- Users upload CSV files via a drag-and-drop interface
-- **Multer** handles multipart file parsing with validation:
-  - Only `.csv` files accepted
-  - File size limits enforced
-- Files are stored in **MongoDB GridFS** (not filesystem) for:
-  - Scalability (no local disk dependency)
-  - Per-user isolation via `metadata.userId`
-  - Secure downloads via authenticated API endpoints
-- After upload, the ML backend is called automatically to begin analysis
-
----
-
-### 2. Dataset Profiling Engine
-
-**File:** `backend-ml/src/profiler.py` → `DatasetProfiler` class
-
-Generates a structured Dataset Quality Report detecting:
-
-| Check | What It Detects |
-|---|---|
-| **Missing Values** | Per-column count of null/NaN values |
-| **Duplicate Rows** | Exact row duplicates in the dataset |
-| **ID Columns** | Columns where every value is unique + name matches patterns like `id`, `key`, `index`, `pk`, `unnamed` |
-| **Constant Columns** | Columns with ≤1 unique value (zero variance) |
-| **High-Cardinality Categoricals** | Categorical columns with >50 unique values |
-| **Class Imbalance** | For classification: minority class < 10% of total |
-| **Data Leakage** | Features with >0.95 correlation with the target column |
-
-**Output format:**
-```json
-{
-  "rows": 15000,
-  "columns": 24,
-  "missing_values": { "salary": 18 },
-  "duplicates": 4,
-  "class_imbalance": true,
-  "warnings": [
-    "Column 'Customer_ID' appears to be an identifier",
-    "Target distribution is highly imbalanced (minority class < 10%)",
-    "Column 'exact_price' has extremely high correlation (0.99) with the target, indicating a data leakage risk"
-  ]
-}
+```
+1. User Uploads CSV ───► Multer streams file to MongoDB GridFS
+                                │
+2. Initial Analysis ────► Python FastAPI downloads dataset from GridFS
+                                │
+                          ┌─────┴────────────────────────────────┐
+                          │ • Basic Cleaning (whitespace, NaNs)  │
+                          │ • DatasetProfiler (schema & risks)   │
+                          │ • Generates 5 EDA charts             │
+                          │ • AI Target Detection (Groq/Ollama)  │
+                          └─────┬────────────────────────────────┘
+                                │
+3. User Confirms Target ◄───────┘
+                                │
+4. Model Training ──────► 5 Models Compete Simultaneously:
+   & Optimization         ├── Logistic / Linear Regression
+                          ├── Random Forest
+                          ├── Gradient Boosting
+                          ├── XGBoost / LightGBM
+                          └── KMeans / GMM (if Clustering)
+                                │
+                          Optuna tunes best model (10 trials, 3-fold CV)
+                                │
+                          Generates Explainer Report & Feature Importance
+                                │
+                          Embeds dataset summary into ChromaDB for RAG
+                                │
+5. Code Generation ─────► Groq Llama 3.3 70B writes complete Python code
+   & Sandbox Verifier           │
+                          Subprocess runs code against sample CSV slice
+                                │
+                          ┌─────┴────────────────────────────────┐
+                          │ Success? ──► Returns verified code   │
+                          │ Failed?  ──► Captures stderr trace   │
+                          │              Feeds back to Groq      │
+                          │              Self-heals (max 2 tries)│
+                          └─────┬────────────────────────────────┘
+                                │
+6. Results & Deployment ◄───────┴── Display metrics, code & Download .ipynb
 ```
 
 ---
 
-### 3. Automated Data Cleaning
+## Comprehensive Feature Breakdown
 
-**File:** `backend-ml/src/data_cleaning.py`
+### 1. Dataset Upload & GridFS Storage
+* **Large File Handling**: Files are uploaded through Express using Multer memory storage and written directly to MongoDB Atlas **GridFS** (`datasets.files` and `datasets.chunks`). This prevents memory leaks and ensures dataset availability across distributed backend instances.
+* **Security Checks**: Strict MIME type checking (`text/csv`, `application/vnd.ms-excel`), 50MB file size limits, and sanitization of filenames.
 
-Three-step pipeline run on every dataset before analysis or training:
+### 2. Dataset Profiling & Data Quality Audit
+* **Class:** `DatasetProfiler` in [`backend-ml/src/profiler.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/profiler.py)
+* Audits every uploaded file across 6 critical quality metrics:
+  1. **Null/Missing Rates**: Per-column percentages and missing distribution.
+  2. **Duplicate Rows**: Counts and percentages of identical records.
+  3. **High-Cardinality Detection**: Flags ID columns, serial keys, and unique hashes.
+  4. **Class Imbalance Risk**: Evaluates categorical targets for minority class skew (< 15%).
+  5. **Data Leakage Warnings**: Checks for column names containing `id`, `target`, `leak`, or identical distributions.
+  6. **Zero-Variance / Constant Columns**: Flags features offering no predictive value.
 
-| Step | Function | Logic |
-|---|---|---|
-| **Parse Formatted Numbers** | `clean_formatted_numbers()` | Strips `$`, `%`, `,` from string columns and converts to numeric if >80% of values are parseable |
-| **Impute Missing Values** | `handle_missing_values()` | Numeric → fill with **median**; Categorical → fill with **mode**; Unknown fallback |
-| **Remove Duplicates** | `remove_duplicates()` | Exact-match deduplication with row count logging |
+### 3. Automated Data Cleaning & Type Inference
+* **File:** [`backend-ml/src/data_cleaning.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/data_cleaning.py)
+* **Intelligent Type Casting**: Strips currency symbols (`$`, `€`, `₹`), comma thousand-separators, and percentages (`%`) from numbers, automatically casting them to numeric floats.
+* **Column Name Normalization**: Converts headers to clean `snake_case`, removing non-alphanumeric punctuation and whitespaces.
+* **Deduplication**: Automatically drops exact duplicate records.
+* **Safe Imputation**: Replaces numerical NaNs with column medians and categorical NaNs with the most frequent value.
 
----
+### 4. AI + Heuristic Target Column Detection
+* **File:** [`backend-ml/src/score_columns.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/score_columns.py)
+* **Hybrid Scoring Algorithm**: Combines linguistic pattern matching with statistical entropy:
+  * Column name semantic checks (`target`, `label`, `churn`, `status`, `price`, `outcome`).
+  * Position heuristic (penultimate and ultimate columns receive higher prior weights).
+  * Unique value distribution and cardinality constraints.
+  * LLM reasoning (via Groq / Ollama / Gemini) to disambiguate complex datasets.
+* Automatically classifies problem type into **Binary Classification**, **Multi-Class Classification**, **Regression**, or **Clustering** (unsupervised).
 
-### 4. AI-Powered Target Column Detection
-
-**File:** `backend-ml/src/score_columns.py`
-
-A hybrid scoring system that combines:
-
-1. **AI Detection** — Queries LLM providers (Ollama → Groq → HuggingFace) with column names, data types, and a 5-row sample to identify the most likely target
-2. **Statistical Heuristics** — Each column is scored on:
-   - Uniqueness ratio (2–20 unique → good for classification, 20–80% → good for regression)
-   - Numeric type bonus
-   - Penalties for ID-like columns (all unique values) and high missing ratios (>50%)
-   - +15 bonus if the AI recommended that column
-3. Returns a ranked list of target candidates for user confirmation
-
-**Problem Type Detection** (`detect_problem_type()`):
-- Non-numeric target → **classification**
-- Numeric target with ≤15 unique values → **classification**
-- Numeric target with >15 unique values → **regression**
-- Special `__clustering__` keyword → **clustering** (unsupervised)
-
----
-
-### 5. Exploratory Data Analysis (EDA)
-
-**File:** `backend-ml/src/eda.py`
-
-Generates 5 publication-quality PNG charts (saved to `outputs/`):
-
-| Chart | File | Description |
-|---|---|---|
-| **Target Distribution** | `target_distribution.png` | Count plot (classification) or histogram+KDE (regression) |
-| **Correlation Heatmap** | `correlation_heatmap.png` | Top 12 numeric features by std, annotated heatmap with coolwarm colormap |
-| **Feature Distributions** | `feature_distributions.png` | Top 9 numeric features, histogram+KDE grid |
-| **Missing Values** | `missing_values.png` | Horizontal bar chart of missing percentages; or "100% Complete" success state |
-| **Outlier Box Plots** | `outliers_boxplot.png` | Top 6 features by std, with red diamond outlier markers |
-
-All plots use a consistent professional style with Seaborn's whitegrid theme, custom color palette (`#4b41e1`), and precise typography.
-
----
+### 5. Exploratory Data Analysis (EDA) Charts
+* **File:** [`backend-ml/src/eda.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/eda.py)
+* Automatically renders and saves 5 publication-ready visualization charts:
+  1. `target_distribution.png`: Bar chart or KDE distribution of the target.
+  2. `correlation_heatmap.png`: Pearson correlation matrix of numerical features.
+  3. `feature_distributions.png`: Multi-panel histograms of high-variance features.
+  4. `missing_values.png`: Matrix plot displaying missingness patterns.
+  5. `outliers_boxplot.png`: Box-and-whisker plots identifying Tukey interquartile range (IQR) anomalies.
 
 ### 6. AutoML Model Competition
+* **File:** [`backend-ml/src/train.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/train.py)
+* Simultaneously initializes, trains, and evaluates 5 competing architectures:
+  * **Classification**: Logistic Regression, Random Forest Classifier, Gradient Boosting Classifier, XGBoost, LightGBM.
+  * **Regression**: Linear Regression, Ridge, Random Forest Regressor, Gradient Boosting Regressor, Decision Tree.
+  * **Clustering**: K-Means, Mini-Batch K-Means, Gaussian Mixture Models (evaluated via Silhouette Score).
+* Constructs an exhaustive **Leaderboard** ranking models by accuracy, precision, recall, F1-score, or R²/RMSE.
 
-**Files:** `backend-ml/src/automl/models.py`, `backend-ml/src/train.py`
+### 7. Hyperparameter Optimization with Optuna
+* **File:** [`backend-ml/src/automl/optimizer.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/automl/optimizer.py)
+* Automatically wraps the champion model from the competition in an **Optuna study**.
+* Employs the **Tree-structured Parzen Estimator (TPE)** algorithm across 10 Bayesian trials with 3-fold Stratified Cross-Validation:
+  * Tunes `n_estimators`, `max_depth`, `learning_rate`, `subsample`, `reg_alpha`, and `reg_lambda`.
+  * Logs optimization history and displays score improvement over baseline defaults.
 
-Automatically trains **5 competing models** based on problem type:
-
-| # | Classification | Regression |
-|---|---|---|
-| 1 | Logistic Regression | Linear Regression |
-| 2 | Random Forest Classifier | Random Forest Regressor |
-| 3 | Gradient Boosting Classifier | Gradient Boosting Regressor |
-| 4 | XGBoost Classifier | XGBoost Regressor |
-| 5 | LightGBM Classifier | LightGBM Regressor |
-
-**For Clustering (unsupervised):**
-- K-Means (k=3), K-Means (k=5), Mini Batch K-Means, Gaussian Mixture
-
-**Data Preparation** (`prepare_data()`):
-1. Subsample to 10,000 rows if dataset is larger (training speed)
-2. Drop constant columns, ID-like columns, and high-cardinality categoricals (>50 unique)
-3. One-hot encode remaining categorical features
-4. 80/20 train/test split
-5. `StandardScaler` fit on training set, transform both sets
-6. Save scaler to `outputs/scaler.pkl` for prediction time
-
-**Evaluation Metrics:**
-
-| Classification | Regression | Clustering |
-|---|---|---|
-| Accuracy | R² Score | Silhouette Score |
-| Precision (weighted) | MAE | — |
-| Recall (weighted) | RMSE | — |
-| F1 Score (weighted) | — | — |
-
-**Output:** A sorted leaderboard with full metrics per model:
-```json
-[
-  { "model": "XGBoost", "score": 0.9234, "metrics": { "accuracy": 0.9234, "precision": 0.9201, "recall": 0.9234, "f1": 0.9215 } },
-  { "model": "Random Forest", "score": 0.8910, "metrics": { "accuracy": 0.8910, "precision": 0.8880, "recall": 0.8910, "f1": 0.8890 } }
-]
-```
-
----
-
-### 7. Hyperparameter Optimization (Optuna)
-
-**File:** `backend-ml/src/automl/optimizer.py` → `AutoMLOptimizer` class
-
-After the model competition, the **winning model** undergoes Bayesian hyperparameter optimization:
-
-| Model | Tuned Hyperparameters | Search Space |
-|---|---|---|
-| **Random Forest** | `n_estimators`, `max_depth`, `min_samples_split` | 50–200, 3–20, 2–10 |
-| **XGBoost** | `learning_rate`, `max_depth`, `n_estimators` | 0.001–0.3 (log), 3–15, 50–200 |
-| **LightGBM** | `learning_rate`, `max_depth`, `num_leaves`, `n_estimators` | 0.001–0.3 (log), 3–15, 15–63, 50–200 |
-
-**Configuration:**
-- **10 trials** per optimization run
-- **3-fold cross-validation** for each trial (speed vs. reliability)
-- **600-second timeout** safety net
-- **Maximize** scoring metric (accuracy for classification, R² for regression)
-
-**Adoption Logic:** The optimized model **replaces** the base model only if its CV score exceeds the base model's test score. Otherwise, the original model is kept.
-
-**Output:**
-```json
-{
-  "run": true,
-  "best_params": { "max_depth": 12, "learning_rate": 0.045, "n_estimators": 150 },
-  "best_score": 0.9312,
-  "n_trials": 10
-}
-```
-
----
-
-### 8. Model Explainability
-
-**File:** `backend-ml/src/explainability.py` → `ModelExplainer` class
-
-Generates normalized feature importance scores (summing to 1.0) for the best model:
-
-| Model Type | Extraction Method |
-|---|---|
-| Tree-based (RF, XGB, LGBM, GB) | `model.feature_importances_` |
-| Linear (Logistic, Linear Regression) | `abs(model.coef_)` (mean across classes for multi-class) |
-| K-Means | Variance of features across `cluster_centers_` |
-| Gaussian Mixture | Variance of features across `means_` |
-
-**Output (top 10 features):**
-```json
-{
-  "status": "success",
-  "top_features": [
-    { "feature": "Age", "importance": 0.35 },
-    { "feature": "Income", "importance": 0.22 },
-    { "feature": "Education_Graduate", "importance": 0.15 }
-  ]
-}
-```
-
-> **Design Decision:** SHAP is intentionally avoided. Feature importance provides sufficient interpretability without the computational overhead and complexity of SHAP values, keeping the system interview-explainable and fast.
-
----
+### 8. Model Explainability & Feature Importance
+* **File:** [`backend-ml/src/explainability.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/explainability.py)
+* Extracts tree-based Gini importances or regression absolute coefficients.
+* Normalizes scores into percentages and delivers a clean JSON payload mapping the top 10 most influential features driving predictions.
 
 ### 9. AI Insights Generation
-
-**File:** `backend-ml/ml_services/app.py` → `/generate-insights` endpoint
-
-After training, the system generates natural-language insights using **Gemini 3.5 Flash**:
-
-**Inputs fed to the LLM prompt:**
-- Dataset Quality Report (from profiler)
-- Model Leaderboard (all models + scores)
-- Best Model name & accuracy
-- Best Hyperparameters (from Optuna)
-- Feature Importance (top features)
-
-**Insights cover:**
-1. Most influential features and their impact
-2. Data quality issues detected
-3. Best model performance assessment & leaderboard context
-4. Concrete next steps to improve
-5. Dataset observations
-
-**Fallback:** If Gemini is unavailable (429/quota), a dynamic rule-based fallback generates equivalent insights using the same data, ensuring users always receive analysis.
-
-**Background Generation:** Insights are generated **asynchronously** after the training response is sent back to the user. The `ModelRun` document is updated in MongoDB once insights are ready. This prevents blocking the user while waiting for the LLM.
-
----
+* **Endpoint:** `POST /generate-insights` in [`backend-ml/ml_services/app.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/ml_services/app.py)
+* Synthesizes the profiler report, leaderboard rankings, Optuna tuning delta, and feature importance into natural-language business takeaways using **Gemini 1.5 Flash** (with rule-based fallbacks).
 
 ### 10. Auto-Healer (Self-Repairing Pipeline)
+* **File:** [`backend-ml/src/auto_healer.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/auto_healer.py)
+* If an unexpected data artifact causes training to fail:
+  1. Captures the full Python traceback.
+  2. Sends the schema, sample data, and traceback to the LLM cascade.
+  3. The LLM generates a custom `clean_df(df)` function.
+  4. Executes the fix in a restricted sandbox (`exec()` with safe builtins).
+  5. Retries training automatically and logs the incident in MongoDB `SystemMessages`.
 
-**File:** `backend-ml/src/auto_healer.py`
+### 11. In-App Sandbox Execution & Self-Healing Code Generator
+* **File:** [`backend-ml/src/code_verifier.py`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/backend-ml/src/code_verifier.py)
+* **Problem Solved**: Generative AI models frequently generate code with slight syntax errors, incompatible column shapes, or missing imports that crash when users run them locally.
+* **How It Works**:
+  1. **Open-Source LLM Generation**: Uses **Groq (`llama-3.3-70b-versatile`)** or local **Ollama** (`qwen2.5-coder:7b`) to draft complete Python scikit-learn code without eating paid Gemini tokens.
+  2. **Isolated Test Sandbox**: Creates a temporary directory, writes a 30-row slice of the actual dataset, and executes the generated script using `subprocess.run(..., timeout=15)`.
+  3. **Verification**: Checks if all imports resolve, data loads, `ColumnTransformer` executes, model fits, and metrics print without errors.
+  4. **Self-Healing Loop**: If `returncode != 0`, captures `stderr`, feeds the traceback back to Groq/Ollama (*"Fix this specific error: {stderr}"*), and re-tests up to 2 times.
+  5. **Guaranteed Fallback**: If the LLM repeatedly fails, injects a pre-tested, bulletproof scikit-learn script with `SimpleImputer` and `StandardScaler` that works on any tabular dataset.
 
-When the training pipeline crashes (e.g., unexpected data types, encoding errors), the Auto-Healer activates:
+### 12. Google Colab Integration & .ipynb Notebook Export
+* **File:** [`frontend/src/pages/Results.tsx`](file:///c:/Users/ROHAN%20BHANGALE/programming/projects/Automodel/autoModel/frontend/src/pages/Results.tsx)
+* Provides a **1-Click "Download .ipynb (Colab)"** button.
+* Automatically bundles the verified Python code into a valid Jupyter Notebook JSON schema (v4.2) containing:
+  * Markdown header with dataset, model, and target metadata.
+  * Dependency installation cell (`!pip install -q pandas numpy scikit-learn xgboost`).
+  * Colab file upload helper snippet (`files.upload()`).
+  * Clean, verified training & evaluation code cells ready to run immediately in Google Colab.
 
-```
-Training Attempt ① → CRASH → Capture Traceback
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │   LLM Cascade Call   │
-                         │   Prompt: error +    │
-                         │   dtypes + 3-row     │
-                         │   sample             │
-                         └──────────┬───────────┘
-                                    │
-                        Generate clean_df(df) code
-                                    │
-                                    ▼
-                         ┌─────────────────────┐
-                         │  Sandboxed exec()   │
-                         │  Safe builtins only  │
-                         │  Only pd, np exposed │
-                         └──────────┬───────────┘
-                                    │
-                         Apply fix → Training Attempt ②
-                                    │
-                         ┌──────────┴──────────┐
-                         │                      │
-                    ✅ Success              ❌ Fatal Error
-                    (continue pipeline)    (return error + audit trail)
-```
+### 13. RAG Chatbot with ChromaDB Memory
+* **Files:** `backend-ml/rag/`
+* Context-aware conversational AI backed by **ChromaDB**:
+  * Vectorizes dataset profile summaries and model performance using `sentence-transformers/all-MiniLM-L6-v2`.
+  * Answers specific user questions: *"Why did Random Forest beat Logistic Regression?"*, *"Which feature should I drop?"*, *"What was my model's accuracy?"*.
+  * Features a **Zero-API Offline Engine** fallback that parses questions and replies factually even if all cloud LLMs are disconnected.
 
-**LLM Cascade for Auto-Healer:**
-1. **Ollama** (Gemma 2 9B — local, dev only)
-2. **Groq** (Llama 3.1 8B — free cloud)
-3. **HuggingFace** (Mistral 7B — free fallback)
+### 14. Visualization Gallery & Chart Insights
+* **Files:** `backend/controller/visualizationController.js`, `frontend/src/pages/Visualizations.tsx`
+* Presents all generated EDA plots in a responsive dashboard with individual AI insight interpretation modals for each plot.
 
-**Safety:** The generated code runs in a **sandboxed `exec()`** with restricted builtins — only `pd`, `np`, and basic Python builtins are exposed. No `os`, `sys`, `subprocess`, or `import` access.
+### 15. Authentication & Razorpay Payments
+* **Authentication**: JWT-based stateless authentication with password hashing using `bcryptjs` (10 rounds). Protected routes across both Express and FastAPI enforce Bearer token validation.
+* **Payments**: Integrated with **Razorpay SDK** for subscription upgrades, featuring cryptographic HMAC-SHA256 signature verification.
 
-**Audit Trail:** Every auto-heal event is persisted as a `SystemMessage` in MongoDB with the original traceback, the LLM-generated code, and the outcome (success/failure).
-
----
-
-### 11. RAG Chatbot
-
-**Files:** `backend-ml/rag/rag_chat.py`, `backend-ml/rag/offline_engine.py`, `backend-ml/rag/store_training_memory.py`, `backend-ml/rag/embedder.py`, `backend-ml/rag/vectordb.py`
-
-A context-aware AI chatbot that understands the user's specific datasets and training results:
-
-**Architecture:**
-
-```
-User Question
-      │
-      ▼
-┌─────────────────────────────────────┐
-│ 1. ChromaDB Vector Search           │
-│    • Embed question via             │
-│      all-MiniLM-L6-v2              │
-│    • Retrieve top-5 relevant docs   │
-│    • Filter by user_id              │
-└──────────────┬──────────────────────┘
-               │
-      ┌────────▼──────────┐
-      │ 2. Intent Check   │  Is this a simple factual lookup?
-      │    (keyword-based) │  (columns, accuracy, model_info...)
-      └────────┬──────────┘
-               │
-      ┌────YES─┴─NO──────┐
-      │                   │
-      ▼                   ▼
-┌────────────┐  ┌──────────────────┐
-│ Short-     │  │ 3. LLM Cascade   │
-│ Circuit    │  │  Gemini → Groq → │
-│ (Offline   │  │  HuggingFace →   │
-│ Engine)    │  │  Ollama           │
-│ ZERO API   │  └────────┬─────────┘
-│ calls      │           │
-└────────────┘   ┌───────▼────────┐
-                 │ 4. Guaranteed  │
-                 │ Offline Engine │  ← if ALL LLMs fail
-                 │ (Zero API)     │
-                 └────────────────┘
-```
-
-**Training Memory Storage:**
-- After each training run, a structured text document is created containing:
-  - Dataset name, shape, all columns, dropped columns
-  - Target column, problem type
-  - Best model, accuracy/score, top features
-- This text is embedded using `all-MiniLM-L6-v2` (384-dim sentence embeddings)
-- Stored in **ChromaDB** (persistent, per-user filtered)
-- Previous memory is cleared on new training to keep the chatbot current
-
-**Offline Engine** (`offline_engine.py`):
-- Handles 10 intent categories: `greeting`, `accuracy`, `model_info`, `columns`, `importance`, `dataset_info`, `improvement`, `problem_type`, `explain`, `compare`
-- Generates intelligent, context-aware responses using templates + actual user data
-- Makes **ZERO API calls** — can never fail or throw 429 errors
-- Acts as the guaranteed-always-works tier in the cascade
+### 16. System Audit Log & Message History
+* **File:** `backend/models/SystemMessage.js`, `frontend/src/pages/SystemMessages.tsx`
+* Transparent audit trail showing every automated healing event, prompt trace, error recovery action, and pipeline notification.
 
 ---
 
-### 12. Visualization Dashboard
+## Machine Learning Algorithms & Libraries
 
-**Frontend Pages:**
-
-| Page | Route | Features |
-|---|---|---|
-| **Landing** | `/` | 3D Three.js hero, feature showcase, testimonials, CTA |
-| **Login / Signup** | `/login`, `/signup` | JWT auth, bcrypt password hashing |
-| **Upload** | `/upload` | Drag-and-drop CSV upload, target column selection with AI suggestions |
-| **Dashboard** | `/dashboard` | Dataset health card, model leaderboard, Optuna results, feature importance chart, profiler warnings |
-| **Results** | `/results` | Best model display, full metric breakdown, leaderboard table |
-| **Visualizations** | `/visualizations` | EDA plot gallery with per-chart AI commentary |
-| **Insights** | `/insights` | Gemini-generated markdown insights |
-| **Chatbot** | `/chatbot` | RAG-powered conversational assistant |
-| **System Messages** | `/messages` | Auto-heal audit trail, pipeline event log |
-| **Settings** | `/settings` | Account management |
-| **Pricing** | `/pricing` | Subscription tiers with Razorpay checkout |
-
-**Frontend Technologies:**
-- React 18 + TypeScript + Vite (dev server on port 8080)
-- TailwindCSS + Shadcn/UI (Radix-based component library)
-- Recharts (data visualization)
-- Three.js + React Three Fiber (3D hero animation)
-- Framer Motion + GSAP (micro-animations)
-- React Router v6 (SPA routing)
-- TanStack React Query (server state management)
-- React Markdown (rendering AI insights)
-
----
-
-### 13. Authentication & Payments
-
-**Authentication:**
-- **Register:** Name + email + bcrypt-hashed password → JWT token
-- **Login:** Email + password → JWT verification → token
-- **JWT Middleware:** Both backends validate the same `JWT_SECRET`
-- Node backend: `authMiddleware.js` extracts user from DB
-- Python backend: `jwt_handler.py` decodes and validates
-- All protected routes require `Authorization: Bearer <token>` header
-
-**Payments (Razorpay):**
-- Order creation with amount in INR
-- HMAC-SHA256 signature verification
-- `User.isSubscribed` flag update on successful payment
-- User ID always taken from JWT (never from client body — prevents IDOR)
-
----
-
-### 14. System Messages & Audit Log
-
-**File:** `backend/models/SystemMessage.js`
-
-Every Auto-Healer event is persisted with:
-- `type`: `error` | `success` | `info`
-- `title`: Human-readable event name
-- `content`: Description of what happened
-- `llmCode`: The Python code generated by the LLM (if applicable)
-- `traceback`: The original stack trace that triggered healing
-- `aiAdvice`: Specialized model advice (optional)
-
-Users can view these on the `/messages` page to understand exactly what happened behind the scenes.
-
----
-
-## ML Models Used & Purpose
-
-| Model | Library | Used For | Why This Model? |
+| Algorithm | Category | Library | Primary Use Case |
 |---|---|---|---|
-| **Logistic Regression** | scikit-learn | Classification baseline | Fast, interpretable, good linear baseline |
-| **Linear Regression** | scikit-learn | Regression baseline | Simplest regression, interpretable coefficients |
-| **Random Forest** | scikit-learn | Classification & Regression | Handles non-linear patterns, robust to overfitting |
-| **Gradient Boosting** | scikit-learn | Classification & Regression | Sequential error correction, strong performance |
-| **XGBoost** | xgboost | Classification & Regression | Regularized gradient boosting, industry standard |
-| **LightGBM** | lightgbm | Classification & Regression | Fastest gradient boosting, handles large datasets |
-| **K-Means** | scikit-learn | Clustering | Standard partitional clustering |
-| **Mini Batch K-Means** | scikit-learn | Clustering | Scalable K-Means for larger datasets |
-| **Gaussian Mixture** | scikit-learn | Clustering | Soft clustering with probabilistic assignment |
-| **StandardScaler** | scikit-learn | Preprocessing | Z-score normalization for all features |
-| **all-MiniLM-L6-v2** | sentence-transformers | RAG Embeddings | 384-dim embeddings, fast & lightweight (22M params) |
-| **Optuna** | optuna | Hyperparameter Optimization | Bayesian (TPE) search, efficient with few trials |
+| **Logistic Regression** | Linear Model | `scikit-learn` | Fast linear classification baseline |
+| **Linear Regression / Ridge** | Linear Model | `scikit-learn` | Interpretable regression baseline |
+| **Random Forest Classifier / Regressor** | Ensemble Bagging | `scikit-learn` | Non-linear relationships, robust to outliers |
+| **Gradient Boosting Classifier / Regressor** | Ensemble Boosting | `scikit-learn` | High-accuracy sequential residual reduction |
+| **XGBoost (XGBClassifier / XGBRegressor)** | Extreme Boosting | `xgboost` | Regularized tree boosting for tabular data |
+| **LightGBM (LGBMClassifier / LGBMRegressor)** | Leaf-wise Boosting | `lightgbm` | Extremely fast boosting for large datasets |
+| **Decision Trees** | Tree Model | `scikit-learn` | Transparent decision rule benchmarks |
+| **Support Vector Machines (SVC / SVR)** | Kernel Methods | `scikit-learn` | Non-linear decision boundaries |
+| **K-Nearest Neighbors (KNN)** | Instance-based | `scikit-learn` | Distance-based classification & regression |
+| **K-Means / Mini-Batch K-Means** | Clustering | `scikit-learn` | Unsupervised centroid-based partitioning |
+| **Gaussian Mixture Models (GMM)** | Probabilistic | `scikit-learn` | Soft clustering with probabilistic densities |
+| **StandardScaler & OneHotEncoder** | Preprocessing | `scikit-learn` | Z-score scaling and categorical transformation |
+| **SimpleImputer** | Preprocessing | `scikit-learn` | Median/mode replacement of missing values |
+| **Optuna (TPESampler)** | Optimization | `optuna` | Bayesian hyperparameter search |
+| **all-MiniLM-L6-v2** | Deep Learning | `sentence-transformers` | 384-dimensional vector embeddings for RAG |
 
 ---
 
-## LLM Architecture & Cascade Strategy
+## LLM Multi-Tier Cascade & Token Preservation Strategy
 
-AutoModel uses LLMs for multiple purposes, with a **multi-tier cascade** to ensure zero-downtime:
+AutoModel implements a multi-tier fallback cascade to ensure **zero downtime** and **minimal token costs**:
 
-| Use Case | Tier 1 (Primary) | Tier 2 | Tier 3 | Tier 4 | Tier 5 (Guaranteed) |
-|---|---|---|---|---|---|
-| **RAG Chatbot** | Gemini 3.5 Flash | Groq (Llama 3.1 8B) | HuggingFace (Mistral 7B) | Ollama (phi3:mini, local) | Offline Engine (zero API) |
-| **AI Insights** | Gemini 3.5 Flash | — | — | — | Dynamic rule-based fallback |
-| **Auto-Healer** | Ollama (Gemma 2 9B, local) | Groq (Llama 3.1 8B) | HuggingFace (Mistral 7B) | — | RuntimeError |
-| **Target Detection** | Ollama (Gemma 2 9B, local) | Groq (Llama 3.1 8B) | HuggingFace (Mistral 7B) | — | Statistical heuristics only |
-| **Viz Insights** | — | — | — | — | Static rule-based text |
-| **Model Advice** | Gemini 3.5 Flash (dual-key) | — | — | — | Graceful error message |
-| **Embeddings** | sentence-transformers (local) | — | — | — | — |
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              TIER 1: FREE OPEN-SOURCE                                  │
+│  • Groq LPU: Meta Llama 3.3 70B Versatile & Llama 3.1 8B Instant (Free tier, fast)     │
+│  • Local Ollama: qwen2.5-coder:7b / gemma2:9b (100% Offline, 0 tokens, free)           │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ Rate-limit (429) or Network Failure
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              TIER 2: EMERGENCY CLOUD AI                                │
+│  • Google Gemini 1.5 Flash (Dual-key failover)                                         │
+│  • HuggingFace Inference API (Mistral 7B)                                              │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ Quota Exhausted or Disconnected
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              TIER 3: ZERO-AI DETERMINISTIC                             │
+│  • Pre-tested Scikit-Learn Pipelines (SimpleImputer + ColumnTransformer)               │
+│  • Offline RAG Rule Engine (Pattern-matched factual lookup)                            │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
-> **All LLM providers used are free-tier.** No paid API keys required. The cascade silently switches to the next provider on any failure (429, timeout, quota). Users never see an error.
+### LLM Task Routing
+
+| Use Case | Tier 1 (Free / Local) | Tier 2 (Cloud Fallback) | Tier 3 (Zero-AI Fallback) |
+|---|---|---|---|
+| **Code Generation & Self-Healing** | **Groq (Llama 3.3 70B)** / **Ollama** | Gemini 1.5 Flash | Bulletproof Deterministic Template |
+| **Auto-Healer Dataset Repair** | **Ollama (Gemma 2)** / **Groq (Llama 3.1)** | HuggingFace (Mistral 7B) | Rule-based imputer |
+| **AI Insights Generation** | Gemini 1.5 Flash | Groq (Llama 3.3 70B) | Dynamic Rule Engine |
+| **RAG Chatbot** | Gemini 1.5 Flash | Groq (Llama 3.1 8B) | Offline RAG Engine (Zero API) |
+| **Target Column Detection** | Groq (Llama 3.1 8B) | Gemini 1.5 Flash | Statistical Heuristic Scorer |
+
+---
+
+## Core Functions & Technical Working
+
+### ML Backend Functions (`backend-ml/src/`)
+
+#### 1. `src/code_verifier.py`
+* **`generate_and_verify_model_code(...)`**:
+  * Orchestrates the code generation, sandbox execution, and self-healing loop.
+  * Takes dataset metadata (`dataset_name`, `target_column`, `problem_type`, `best_model`, `accuracy`, and optional `sample_df`).
+  * Calls `call_open_source_llm` to draft the initial script.
+  * Runs the script through `test_run_code`. If execution fails, initiates a self-healing retry loop (up to 2 iterations) feeding error tracebacks back to Groq/Ollama.
+* **`test_run_code(code, sample_df, dataset_name, timeout_sec=15)`**:
+  * Writes a sample CSV and Python script into an isolated `tempfile.TemporaryDirectory()`.
+  * Runs `subprocess.run([sys.executable, "train_model.py"], timeout=15, capture_output=True)`.
+  * Returns `(True, stdout)` on success, or `(False, stderr)` on error/timeout.
+* **`call_open_source_llm(prompt)`**:
+  * Checks for local Ollama (`USE_OLLAMA=true`).
+  * Posts to Groq OpenAI-compatible completions API using `llama-3.3-70b-versatile` or `llama-3.1-8b-instant`.
+  * Falls back to Gemini REST if Groq is unavailable.
+* **`generate_bulletproof_deterministic_code(...)`**:
+  * Generates an error-proof, production-grade scikit-learn script configured with `ColumnTransformer`, `SimpleImputer(strategy='median')`, `SimpleImputer(strategy='most_frequent')`, `OneHotEncoder(handle_unknown='ignore')`, and the exact model architecture.
+
+#### 2. `src/profiler.py`
+* **`DatasetProfiler.__init__(df, target_column, problem_type)`**:
+  * Initializes dataset state, separates features and target, and records base dimensions.
+* **`DatasetProfiler.profile()`**:
+  * Evaluates missing rates, duplicate counts, memory usage, high-cardinality features, class imbalance ratios, and data leakage flags. Returns a structured JSON quality audit report.
+
+#### 3. `src/data_cleaning.py`
+* **`basic_cleaning(df)`**:
+  * Strips leading/trailing whitespace from string columns.
+  * Normalizes column names into lowercase alphanumeric strings with underscores.
+  * Parses currency and formatted percentage numbers into numeric floats.
+  * Drops fully empty rows and duplicate rows.
+
+#### 4. `src/score_columns.py`
+* **`score_columns(df)`**:
+  * Scores every column as a candidate target using keyword matching, position heuristics, unique ratio analysis, and entropy.
+* **`detect_problem_type(y_series)`**:
+  * Determines whether the target column represents `classification` (discrete/low unique values) or `regression` (continuous numeric).
+
+#### 5. `src/train.py`
+* **`prepare_data(df, target_column, max_rows=10000)`**:
+  * Subsamples datasets exceeding `max_rows` to prevent server latency.
+  * Isolates target column `y` and feature matrix `X`.
+  * Drops constant columns and high-cardinality ID/index columns.
+  * Encodes categorical columns and handles remaining NaNs.
+* **`train_models(X_train, X_test, y_train, y_test, problem_type)`**:
+  * Runs the 5 competing algorithms through training and evaluation loops.
+  * Calculates accuracy, precision, recall, F1-score, or R²/RMSE.
+  * Automatically invokes `run_optuna_hpo` on the highest-scoring model.
+
+#### 6. `src/auto_healer.py`
+* **`auto_heal_dataset(df, error_traceback)`**:
+  * Prompts the LLM cascade with the traceback and sample rows to synthesize a `clean_df(df)` function.
+  * Executes the fix in a sandbox using `exec()` with restricted builtins (`pd`, `np` only).
+
+---
+
+### RAG & Vector Memory Functions (`backend-ml/rag/`)
+
+* **`rag_chat.py → ask_ai(question, user_id)`**:
+  * Queries ChromaDB for top-5 relevant documents filtered by `user_id`.
+  * Uses keyword intent checks for rapid lookup (e.g., column names, accuracy).
+  * Prompts the LLM cascade with retrieved context.
+* **`store_training_memory.py → store_training_memory(user_id, dataset_name, ...)`**:
+  * Assembles dataset metrics, leaderboard rankings, and Optuna parameters into semantic text chunks.
+  * Generates 384-dimensional embeddings via `all-MiniLM-L6-v2` and persists them into ChromaDB.
+* **`offline_engine.py → generate_offline_response(question, context)`**:
+  * Zero-API fallback that uses regular expressions and text parsing to answer questions directly from context when cloud APIs are offline.
+
+---
+
+### Node.js Backend Controllers & Services (`backend/`)
+
+* **`services/codeGenerator.js → generateModelCode(data, authToken)`**:
+  * **Tier 1:** Proxies to `backend-ml` `/generate-verified-code` endpoint with user JWT.
+  * **Tier 2:** Calls Groq directly using `process.env.GROQ_API_KEY` (`llama-3.3-70b-versatile`).
+  * **Tier 3:** Calls Gemini REST API (`gemini-1.5-flash`).
+  * **Tier 4:** Employs `generateDeterministicPythonCode` (safe deterministic template).
+* **`controller/confirmController.js → confirmTarget(req, res)`**:
+  * Receives target confirmation, proxies request to Python backend `/confirm-target` with a 120-second timeout.
+  * Automatically handles auto-heal audit logging and records `ModelRun` in MongoDB.
+* **`controller/uploadController.js → uploadDataset(req, res)`**:
+  * Streams CSV file to MongoDB GridFS.
+  * Forwards dataset to Python `/analyze` endpoint to trigger profiling, EDA generation, and target detection.
+
+---
+
+### Frontend Hooks & Page Handlers (`frontend/src/`)
+
+* **`pages/Results.tsx → handleGenerateCode()`**:
+  * Dispatches `POST /models/generate-code` passing `datasetName`, `targetColumn`, `problemType`, `bestModel`, `accuracy`, and `datasetId`.
+  * Displays the "Sandbox Verified" status badge upon completion.
+* **`pages/Results.tsx → handleDownloadNotebook()`**:
+  * Converts the verified Python script into a standard Jupyter Notebook (`.ipynb`) and triggers a browser download.
+
+---
+
+## Complete API Reference
+
+### Node.js Gateway Endpoints (Port 5000)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | None | Register new user account |
+| `POST` | `/api/auth/login` | None | Authenticate user & return signed JWT |
+| `POST` | `/api/upload` | Bearer JWT | Stream CSV to GridFS & trigger dataset analysis |
+| `POST` | `/api/upload/confirm-target` | Bearer JWT | Confirm target column & initiate model training |
+| `POST` | `/api/models/generate-code` | Bearer JWT | Generate and verify Python inference code |
+| `GET` | `/api/models/my-models` | Bearer JWT | Retrieve all historical ModelRuns for logged-in user |
+| `GET` | `/api/dataset/:id/download` | Bearer JWT | Stream CSV file from MongoDB GridFS |
+| `POST` | `/api/chat` | Bearer JWT | Send question to context-aware RAG chatbot |
+| `GET` | `/api/messages` | Bearer JWT | Retrieve auto-healer audit logs & system messages |
+| `POST` | `/api/payment/create-order` | Bearer JWT | Create Razorpay order ID |
+| `POST` | `/api/payment/verify` | Bearer JWT | Verify Razorpay payment signature & upgrade user |
+| `GET` | `/api/visualizations/plot/:filename` | None | Serve generated EDA image files |
+
+---
+
+### Python ML Engine Endpoints (Port 8000)
+
+| Method | Endpoint | Auth | Request Body / Params | Description |
+|---|---|---|---|---|
+| `POST` | `/analyze` | Bearer JWT | `file` (UploadFile) | Cleans data, profiles quality, generates 5 EDA charts, detects target |
+| `POST` | `/confirm-target` | Bearer JWT | `{ dataset_id, target_column, dataset_name }` | Runs 5-model competition, Optuna HPO, explainability & vector storage |
+| `POST` | `/generate-verified-code`| Optional JWT| `{ dataset_name, target_column, problem_type, best_model, accuracy, dataset_id }` | Generates Python code, executes in subprocess sandbox, auto-heals tracebacks |
+| `POST` | `/generate-insights` | Bearer JWT | `{ report, leaderboard, best_model, top_features }` | Generates AI summary & recommendations via Gemini |
+| `POST` | `/chat` | Bearer JWT | `{ question }` | Vector search in ChromaDB + RAG response |
+| `GET` | `/sample-data` | Bearer JWT | `dataset_id` (query param) | Returns first 10 rows for auto-healer analysis |
+| `GET` | `/outputs/:filename` | None | None | Serves static EDA chart image plots |
+
+---
+
+## Database Schemas & Data Models
+
+### `users` Collection
+```json
+{
+  "_id": "ObjectId",
+  "name": "Rohan Bhangale",
+  "email": "rohan@example.com",
+  "password": "$2a$10$hashed_password_string...",
+  "isSubscribed": false,
+  "createdAt": "2026-10-29T00:00:00.000Z",
+  "updatedAt": "2026-10-29T00:00:00.000Z"
+}
+```
+
+### `modelruns` Collection
+```json
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId (ref: User)",
+  "datasetName": "heart_disease.csv",
+  "targetColumn": "target",
+  "problemType": "classification",
+  "bestModel": "Random Forest",
+  "accuracy": 0.945,
+  "rows": 1025,
+  "columns": 14,
+  "topFeatures": [
+    { "feature": "cp", "importance": 0.284 },
+    { "feature": "thalach", "importance": 0.192 }
+  ],
+  "explainReport": { "status": "success", "feature_importance": { ... } },
+  "leaderboard": [
+    { "model": "Random Forest", "score": 0.945, "metrics": { "f1": 0.944 } },
+    { "model": "XGBoost", "score": 0.938, "metrics": { "f1": 0.936 } }
+  ],
+  "profileReport": { "null_percentage": 0.0, "duplicate_rows": 0, "risks": [] },
+  "optunaResults": { "best_score": 0.952, "best_params": { "n_estimators": 140 } },
+  "insights": "### Model Assessment\nRandom Forest achieved 94.5% accuracy...",
+  "createdAt": "2026-10-29T00:00:00.000Z"
+}
+```
+
+### `systemmessages` Collection (Audit Trail)
+```json
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId (ref: User)",
+  "datasetName": "student_scores.csv",
+  "datasetId": "66a7b...",
+  "type": "success",
+  "title": "Healing Successful!",
+  "content": "Handled missing categorical values using LLM auto-healer.",
+  "llmCode": "def clean_df(df):\n    df['grade'].fillna(df['grade'].median(), inplace=True)\n    return df",
+  "traceback": "ValueError: Input contains NaN...",
+  "createdAt": "2026-10-29T00:00:00.000Z"
+}
+```
 
 ---
 
 ## Tech Stack
 
-### Frontend
-| Technology | Version | Purpose |
-|---|---|---|
-| React | 18.3 | UI framework |
-| TypeScript | 5.8 | Type safety |
-| Vite | 5.4 | Build tool & dev server |
-| TailwindCSS | 3.4 | Utility-first CSS |
-| Shadcn/UI | Latest | Radix-based component library |
-| Recharts | 2.15 | Data visualization charts |
-| Three.js | 0.160 | 3D hero animation |
-| Framer Motion | 11.18 | Page transitions & animations |
-| React Router | 6.30 | Client-side routing |
-| TanStack Query | 5.83 | Server state management |
-| Axios | 1.13 | HTTP client |
-| Zod | 3.25 | Schema validation |
-
-### Node Backend
-| Technology | Version | Purpose |
-|---|---|---|
-| Express | 5.2 | HTTP framework |
-| Mongoose | 9.2 | MongoDB ODM |
-| bcryptjs | 3.0 | Password hashing |
-| jsonwebtoken | 9.0 | JWT auth tokens |
-| Multer | 2.0 | File upload parsing |
-| express-rate-limit | 8.3 | API rate limiting |
-| Razorpay | 2.9 | Payment gateway |
-| @google/generative-ai | 0.24 | Gemini API client |
-
-### Python ML Backend
-| Technology | Version | Purpose |
-|---|---|---|
-| FastAPI | 0.110+ | API framework |
-| scikit-learn | 1.5+ | ML algorithms & preprocessing |
-| XGBoost | Latest | Gradient boosting |
-| LightGBM | Latest | Fast gradient boosting |
-| Optuna | Latest | Hyperparameter optimization |
-| Pandas | 2.2+ | Data manipulation |
-| Matplotlib + Seaborn | Latest | Chart generation |
-| ChromaDB | 0.5+ | Vector database for RAG |
-| sentence-transformers | Latest | Text embeddings |
-| google-generativeai | Latest | Gemini API |
-| PyJWT | Latest | JWT verification |
-
-### Infrastructure
-| Service | Purpose |
+| Layer | Technologies & Tools |
 |---|---|
-| **MongoDB Atlas** | Database (Users, ModelRuns, SystemMessages, GridFS file storage) |
-| **Vercel** | Frontend hosting (CDN, SPA routing) |
-| **Render** | Node backend hosting |
-| **HuggingFace Spaces** | ML backend hosting (Docker) |
+| **Frontend** | React 18.3, TypeScript 5.8, Vite 5.4, TailwindCSS 3.4, Shadcn/UI, Lucide React, Framer Motion, Three.js, Recharts, Axios, React Router v6 |
+| **API Gateway** | Node.js 20, Express 5, Mongoose, Multer, MongoDB GridFS, JWT, bcryptjs, Razorpay SDK, Axios |
+| **ML Engine** | Python 3.11, FastAPI, Uvicorn, Pandas, NumPy, Scikit-Learn, XGBoost, LightGBM, Optuna, Joblib, Matplotlib, Seaborn |
+| **RAG & Vectors**| ChromaDB, Sentence-Transformers (`all-MiniLM-L6-v2`), LangChain-style retrieval |
+| **LLM Providers**| Groq API (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`), Google Gemini 1.5 Flash, Ollama, HuggingFace Inference API |
+| **Database** | MongoDB Atlas (M0 Free Tier / Production Cluster) |
+| **Deployment** | Vercel (Frontend SPA), Render (Node.js Gateway), HuggingFace Spaces / Docker (ML Backend) |
 
 ---
 
-## Project Structure
+## Repository Structure
 
 ```
-autoModel/
-├── frontend/                          # React + TypeScript SPA
-│   ├── src/
-│   │   ├── pages/                     # Route-level components
-│   │   │   ├── Landing.tsx            # Marketing landing page with 3D hero
-│   │   │   ├── Login.tsx              # JWT login form
-│   │   │   ├── Signup.tsx             # Registration form
-│   │   │   ├── Dashboard.tsx          # Main analytics dashboard
-│   │   │   ├── Upload.tsx             # CSV upload + target selection
-│   │   │   ├── Results.tsx            # Model results & leaderboard
-│   │   │   ├── Visualizations.tsx     # EDA chart gallery
-│   │   │   ├── Insights.tsx           # AI-generated insights display
-│   │   │   ├── Chatbot.tsx            # RAG chatbot interface
-│   │   │   ├── SystemMessages.tsx     # Auto-heal audit log
-│   │   │   ├── Settings.tsx           # User account settings
-│   │   │   └── Pricing.tsx            # Subscription with Razorpay
-│   │   ├── components/
-│   │   │   ├── DashboardLayout.tsx    # Sidebar + navigation layout
-│   │   │   ├── Hero3DModel.tsx        # Three.js 3D animation
-│   │   │   ├── NavLink.tsx            # Navigation component
-│   │   │   ├── ProtectedRoute.jsx     # JWT route guard
-│   │   │   ├── CTA.tsx               # Call-to-action section
-│   │   │   ├── Footer.tsx            # Site footer
-│   │   │   ├── testimonials.tsx      # Social proof section
-│   │   │   ├── steps.jsx            # How-it-works section
-│   │   │   └── ui/                   # Shadcn/UI components
-│   │   ├── api/                       # Axios API client functions
-│   │   ├── config/                    # URL configuration (auto-detect env)
-│   │   ├── hooks/                     # Custom React hooks
-│   │   ├── lib/                       # Utility library
-│   │   └── utils/                     # Helper functions
-│   ├── index.html                     # Entry HTML
-│   ├── tailwind.config.ts             # Tailwind theme
-│   ├── vite.config.ts                 # Vite build config
-│   └── vercel.json                    # Vercel SPA routing config
-│
-├── backend/                           # Node.js API Gateway
-│   ├── server.js                      # Express app entry point
-│   ├── config/
-│   │   └── db.js                      # MongoDB Atlas connection
-│   ├── controller/
-│   │   ├── authController.js          # Register + Login
-│   │   ├── uploadController.js        # CSV upload → GridFS → ML analyze
-│   │   ├── confirmController.js       # Target confirmation → Training → Save results
-│   │   ├── chatController.js          # Proxy chat to ML backend
-│   │   ├── modelController.js         # Fetch saved model runs
-│   │   ├── datasetController.js       # GridFS dataset download
-│   │   ├── visualizationController.js # Proxy EDA plot requests
-│   │   ├── messageController.js       # System message CRUD
-│   │   └── paymentController.js       # Razorpay order + verification
-│   ├── models/
-│   │   ├── User.js                    # User schema (name, email, password, isSubscribed)
-│   │   ├── ModelRun.js                # Training results schema
-│   │   └── SystemMessage.js           # Auto-heal event log schema
-│   ├── middleware/
-│   │   └── authMiddleware.js          # JWT verification middleware
-│   ├── routes/
-│   │   ├── authRoutes.js              # POST /register, /login
-│   │   ├── uploadRoutes.js            # POST /upload, /confirm-target
-│   │   ├── modelRoutes.js             # GET /models
-│   │   ├── chatRoutes.js              # POST /chat
-│   │   ├── datasetRoutes.js           # GET /dataset/:id/download
-│   │   ├── messageRoutes.js           # GET/POST /messages
-│   │   └── paymentRoutes.js           # POST /create-order, /verify
-│   ├── services/
-│   │   ├── geminiServices.js          # Gemini API for model advice
-│   │   └── codeGenerator.js           # Code generation service
-│   └── utils/
-│       ├── generateToken.js           # JWT token factory
-│       └── errorLogger.js             # Error persistence utility
-│
-├── backend-ml/                        # Python ML Engine
-│   ├── ml_services/
-│   │   └── app.py                     # FastAPI main application
-│   ├── src/
-│   │   ├── profiler.py                # DatasetProfiler class
-│   │   ├── data_cleaning.py           # Imputation, dedup, number parsing
-│   │   ├── data_loader.py             # CSV loading utility
-│   │   ├── score_columns.py           # AI + heuristic target detection
-│   │   ├── eda.py                     # 5 EDA chart generators
-│   │   ├── train.py                   # Data prep + model competition
-│   │   ├── predict.py                 # Inference pipeline
-│   │   ├── explainability.py          # ModelExplainer class
-│   │   ├── auto_healer.py             # LLM-powered dataset repair
-│   │   ├── utils.py                   # Shared utilities
-│   │   └── automl/
-│   │       ├── models.py              # Model registry (5 per task type)
-│   │       └── optimizer.py           # Optuna HPO wrapper
-│   ├── rag/
-│   │   ├── rag_chat.py                # RAG pipeline + LLM cascade
-│   │   ├── offline_engine.py          # Zero-API fallback (guaranteed)
-│   │   ├── store_training_memory.py   # Embed + store in ChromaDB
-│   │   ├── embedder.py                # sentence-transformers wrapper
-│   │   ├── vectordb.py                # ChromaDB client
-│   │   └── prompt_builder.py          # Prompt construction
-│   ├── auth/
-│   │   └── jwt_handler.py             # FastAPI JWT dependency
-│   ├── config.py                      # Environment detection
-│   ├── main.py                        # CLI entry point (local testing)
-│   ├── Dockerfile                     # HuggingFace Spaces deployment
-│   └── requirements.txt               # Python dependencies
-│
-├── hf_app.py                          # HuggingFace Spaces entry point
-├── render.yaml                        # Render deployment config
-├── planning.md                        # Development roadmap
-└── .gitignore
+Automodel/
+├── autoModel/
+│   ├── backend/                           # Node.js API Gateway (Express 5)
+│   │   ├── config/
+│   │   │   ├── db.js                      # MongoDB Atlas connection
+│   │   │   └── urls.js                    # ML backend URL resolver
+│   │   ├── controller/
+│   │   │   ├── authController.js          # Authentication (register, login)
+│   │   │   ├── uploadController.js        # CSV upload → GridFS → ML analyze
+│   │   │   ├── confirmController.js       # Target confirmation & training pipeline
+│   │   │   ├── modelController.js         # Model run retrieval
+│   │   │   ├── datasetController.js       # GridFS file streaming
+│   │   │   ├── chatController.js          # RAG chat proxy
+│   │   │   ├── visualizationController.js # Plot proxy & chart insights
+│   │   │   ├── messageController.js       # System audit logs
+│   │   │   └── paymentController.js       # Razorpay orders & verification
+│   │   ├── middleware/
+│   │   │   └── authMiddleware.js          # JWT bearer token verification
+│   │   ├── models/
+│   │   │   ├── User.js                    # User schema
+│   │   │   ├── ModelRun.js                # Training run schema
+│   │   │   └── SystemMessage.js           # Auto-heal audit log schema
+│   │   ├── routes/
+│   │   │   ├── authRoutes.js
+│   │   │   ├── uploadRoutes.js
+│   │   │   ├── modelRoutes.js
+│   │   │   ├── chatRoutes.js
+│   │   │   ├── datasetRoutes.js
+│   │   │   ├── messageRoutes.js
+│   │   │   └── paymentRoutes.js
+│   │   ├── services/
+│   │   │   ├── codeGenerator.js           # Multi-tier code generator with Groq/Gemini
+│   │   │   └── geminiServices.js          # Gemini service for insights
+│   │   └── server.js                      # Express server entry point
+│   │
+│   ├── backend-ml/                        # Python ML Backend (FastAPI)
+│   │   ├── ml_services/
+│   │   │   └── app.py                     # FastAPI application & API routes
+│   │   ├── src/
+│   │   │   ├── code_verifier.py           # In-app sandbox executor & self-healing generator
+│   │   │   ├── profiler.py                # DatasetProfiler engine
+│   │   │   ├── data_cleaning.py           # Automated cleaner & type caster
+│   │   │   ├── score_columns.py           # AI + heuristic target detection
+│   │   │   ├── eda.py                     # 5 EDA visualization generators
+│   │   │   ├── train.py                   # 5-model competition & preprocessing
+│   │   │   ├── auto_healer.py             # LLM error recovery engine
+│   │   │   ├── explainability.py          # ModelExplainer feature importance
+│   │   │   └── automl/
+│   │   │       ├── models.py              # Scikit-learn, XGBoost, LightGBM models
+│   │   │       └── optimizer.py           # Optuna Bayesian HPO wrapper
+│   │   ├── rag/
+│   │   │   ├── rag_chat.py                # RAG retrieval & LLM pipeline
+│   │   │   ├── store_training_memory.py   # Vectorizes training runs into ChromaDB
+│   │   │   ├── offline_engine.py          # Zero-API offline factual engine
+│   │   │   └── embedder.py                # sentence-transformers wrapper
+│   │   ├── auth/
+│   │   │   └── jwt_handler.py             # FastAPI JWT validation dependency
+│   │   ├── data/                          # Sample datasets
+│   │   ├── outputs/                       # Generated plots (.png) & best_model.pkl
+│   │   ├── requirements.txt               # Python package dependencies
+│   │   └── Dockerfile                     # Container deployment specification
+│   │
+│   ├── frontend/                          # Client Web Application (React 18 + Vite)
+│   │   ├── src/
+│   │   │   ├── pages/
+│   │   │   │   ├── Upload.tsx             # Drag-and-drop CSV upload & profiler display
+│   │   │   │   ├── Dashboard.tsx          # Main dashboard & active runs
+│   │   │   │   ├── Results.tsx            # Model leaderboard, code viewer & Colab export
+│   │   │   │   ├── Visualizations.tsx     # EDA chart gallery & modal viewer
+│   │   │   │   ├── Insights.tsx           # AI insights display
+│   │   │   │   ├── Chatbot.tsx            # Context-aware RAG chat interface
+│   │   │   │   ├── SystemMessages.tsx     # Self-healing audit logs
+│   │   │   │   ├── Pricing.tsx            # Razorpay subscription upgrade
+│   │   │   │   └── Auth.tsx               # Login & Registration forms
+│   │   │   ├── components/
+│   │   │   │   ├── DashboardLayout.tsx    # Sidebar & navigation frame
+│   │   │   │   ├── Hero3DModel.tsx        # Interactive Three.js 3D visualizer
+│   │   │   │   └── ui/                    # Shadcn/UI component primitives
+│   │   │   └── api/
+│   │   │       └── axios.ts               # Axios client with JWT interceptor
+│   │   ├── tailwind.config.ts             # Tailwind CSS theme
+│   │   └── vite.config.ts                 # Vite bundler configuration
+│   └── README.md                          # Comprehensive project documentation
 ```
-
----
-
-## Database Schema
-
-### `users` Collection
-```javascript
-{
-  _id: ObjectId,
-  name: String (required),
-  email: String (required, unique, lowercase),
-  password: String (required, bcrypt hash, min 6 chars),
-  isSubscribed: Boolean (default: false),
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### `modelruns` Collection
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User, required),
-  datasetName: String,
-  targetColumn: String,
-  problemType: String,        // "classification" | "regression" | "clustering"
-  bestModel: String,           // e.g., "XGBoost", "Random Forest"
-  accuracy: Number,            // 0.0–1.0 for classification, R² for regression
-  rows: Number,
-  columns: Number,
-  topFeatures: Array,          // [{ feature, importance }]
-  explainReport: Object,       // Full ModelExplainer output
-  leaderboard: Array,          // [{ model, score, metrics }]
-  profileReport: Object,       // DatasetProfiler output
-  optunaResults: Object,       // { run, best_params, best_score, n_trials }
-  insights: String,            // Gemini-generated markdown (default: "Pending")
-  createdAt: Date
-}
-```
-
-### `systemmessages` Collection
-```javascript
-{
-  _id: ObjectId,
-  userId: ObjectId (ref: User, required),
-  datasetName: String (required),
-  datasetId: String,
-  type: String (enum: ["error", "success", "info"]),
-  title: String (required),
-  content: String (required),
-  llmCode: String,             // Auto-healer generated code
-  traceback: String,           // Original error stack trace
-  aiAdvice: String,            // ML-specific advice from Gemini
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### `datasets.files` + `datasets.chunks` (GridFS)
-```javascript
-// files
-{
-  _id: ObjectId,
-  filename: String,            // Original CSV filename
-  length: Number,              // File size in bytes
-  chunkSize: Number,
-  uploadDate: Date,
-  metadata: { userId: ObjectId }
-}
-```
-
----
-
-## API Reference
-
-### Node Backend (port 5000)
-
-| Method | Route | Auth | Rate Limit | Description |
-|---|---|---|---|---|
-| `POST` | `/api/auth/register` | ❌ | 20/15min | Register new user |
-| `POST` | `/api/auth/login` | ❌ | 20/15min | Login, returns JWT |
-| `POST` | `/api/upload` | ✅ | 20/15min | Upload CSV → GridFS → ML analyze |
-| `POST` | `/api/upload/confirm-target` | ✅ | 20/15min | Confirm target → train → save |
-| `GET` | `/api/models` | ✅ | 300/min | List user's ModelRuns |
-| `GET` | `/api/dataset/:id/download` | ✅ | 300/min | Download CSV from GridFS |
-| `POST` | `/api/chat` | ✅ | 30/min | Proxy to ML chatbot |
-| `GET` | `/api/messages` | ✅ | 300/min | Get system messages |
-| `POST` | `/api/payment/create-order` | ✅ | 300/min | Create Razorpay order |
-| `POST` | `/api/payment/verify` | ✅ | 300/min | Verify payment signature |
-| `GET` | `/api/visualizations/plot/:filename` | ❌ | 300/min | Serve EDA plot images |
-| `GET` | `/api/visualizations/insight/:chartName` | ✅ | 300/min | Get chart-specific AI insight |
-
-### ML Backend (port 8000)
-
-| Method | Route | Auth | Description |
-|---|---|---|---|
-| `POST` | `/analyze` | ✅ JWT | Analyze dataset: clean → profile → EDA → suggest target |
-| `POST` | `/confirm-target` | ✅ JWT | Train models: prepare → compete → optimize → explain |
-| `POST` | `/generate-insights` | ✅ JWT | Generate AI insights via Gemini |
-| `POST` | `/chat` | ✅ JWT | RAG chatbot query |
-| `GET` | `/visualization-insights/:chart_name` | ✅ JWT | Per-chart AI analysis |
-| `GET` | `/sample-data?dataset_id=` | ✅ JWT | Get first 10 rows for auto-healer |
-| `GET` | `/outputs/:filename` | ❌ | Static file server for EDA plots |
-
----
-
-## Security & Production Hardening
-
-| Feature | Implementation |
-|---|---|
-| **Password Hashing** | bcrypt with 10 salt rounds |
-| **JWT Authentication** | Shared secret between Node and Python backends |
-| **CORS** | Explicit origin allowlist (no wildcard in production) |
-| **Rate Limiting** | Tiered: Auth (20/15min), Upload (20/15min), Chat (30/min), General (300/min) |
-| **File Validation** | Multer: CSV-only, size-capped |
-| **Input Validation** | Pydantic models with min/max constraints on all ML endpoints |
-| **Error Isolation** | Production: generic 500 messages, no stack traces leaked to client |
-| **Error Logging** | All errors persisted to `last_server_error.txt` + `SystemMessage` collection |
-| **Payment Security** | HMAC-SHA256 signature verification; userId from JWT, never from client body |
-| **Auto-Healer Sandbox** | Restricted `exec()` with allowlisted builtins only |
-| **Proxy Trust** | `trust proxy` enabled for Render's reverse proxy |
 
 ---
 
 ## Local Development Setup
 
 ### Prerequisites
-- Node.js 18+
-- Python 3.10+
-- MongoDB Atlas account (free tier works)
-- Git
+* **Node.js**: v18.0.0 or higher
+* **Python**: v3.10 or v3.11
+* **MongoDB**: Local MongoDB instance or free MongoDB Atlas cluster connection string
+* **Git**: Installed and configured
 
-### 1. Clone the Repository
+### 1. Clone & Navigate
 ```bash
 git clone https://github.com/rohanb1022/autoModel.git
 cd autoModel
 ```
 
-### 2. Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-# → http://localhost:8080
-```
-
-### 3. Node Backend Setup
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit .env with your MongoDB URI, JWT secret, API keys
-node server.js
-# → http://localhost:5000
-```
-
-### 4. Python ML Backend Setup
+### 2. Python ML Backend Setup
 ```bash
 cd backend-ml
 python -m venv venv
 
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
+# Activate Virtual Environment:
+# On Windows PowerShell:
+.\venv\Scripts\Activate.ps1
+# On macOS / Linux:
 source venv/bin/activate
 
+# Install dependencies:
 pip install -r requirements.txt
 
+# Configure Environment Variables:
 cp .env.example .env
-# Edit .env: set USE_OLLAMA=true for local LLMs, false for cloud APIs
+# Open .env and add your GROQ_API_KEY, JWT_SECRET, etc.
 
-uvicorn ml_services.app:app --reload --port 8000
-# → http://localhost:8000
+# Start FastAPI server using python module syntax:
+python -m uvicorn ml_services.app:app --reload --port 8000
+# ML Backend will run on http://localhost:8000
+```
+> **Note for Windows Users**: If running `uvicorn` directly causes an `Application Control policy has blocked this file` error, always execute via Python module syntax: `python -m uvicorn ml_services.app:app --reload --port 8000`.
+
+### 3. Node.js Backend Gateway Setup
+```bash
+cd ../backend
+npm install
+
+# Configure Environment Variables:
+cp .env.example .env
+# Ensure MONGO_URI and JWT_SECRET are defined (must match backend-ml JWT_SECRET)
+
+# Start development server:
+npm run dev
+# Node Backend will run on http://localhost:5000
 ```
 
-### 5. (Optional) Local LLM with Ollama
+### 4. Frontend Application Setup
 ```bash
-# Install Ollama from https://ollama.ai
-ollama pull phi3:mini       # For chatbot
-ollama pull gemma2:9b       # For auto-healer & target detection
-# Set USE_OLLAMA=true in backend-ml/.env
+cd ../frontend
+npm install
+
+# Start Vite development server:
+npm run dev
+# Frontend will run on http://localhost:5173 (or http://localhost:8080)
 ```
 
 ---
 
 ## Deployment Guide
 
-### Frontend → Vercel
+### Frontend Deployment (Vercel)
+1. Push your repository to GitHub.
+2. Link repository in [Vercel](https://vercel.com).
+3. Set **Root Directory** to `frontend`.
+4. Build command: `npm run build` | Output directory: `dist`.
+5. Deploy. SPA client-side routing is handled via `frontend/vercel.json`.
 
-1. Push repo to GitHub
-2. Go to [vercel.com](https://vercel.com) → New Project → Import from GitHub
-3. Set **Root Directory**: `frontend`
-4. Set **Build Command**: `npm run build`
-5. Set **Output Directory**: `dist`
-6. No environment variables needed (URLs auto-detect via `src/config/urls.ts`)
-7. Deploy — SPA routing is pre-configured in `frontend/vercel.json`
+### Node.js Backend Deployment (Render)
+1. In [Render](https://render.com), create a new **Web Service**.
+2. Set **Root Directory** to `backend`.
+3. Build command: `npm install` | Start command: `node server.js`.
+4. Configure environment variables (`MONGO_URI`, `JWT_SECRET`, `ML_BACKEND_URL`, etc.).
 
-### Node Backend → Render
-
-1. Go to [render.com](https://render.com) → New → Web Service
-2. Connect GitHub repo, set **Root Directory**: `backend`
-3. Set **Build Command**: `npm install`
-4. Set **Start Command**: `node server.js`
-5. Add environment variables (see below)
-
-> The `render.yaml` at the project root is pre-configured for one-click deployment.
-
-### ML Backend → HuggingFace Spaces
-
-1. Create a Space at [huggingface.co/spaces](https://huggingface.co/spaces)
-2. Choose **Docker** as the SDK
-3. Connect GitHub repo, set **Root Directory**: `backend-ml`
-4. Add repository secrets (see below)
-
-> HuggingFace Spaces is ideal because it provides a free Docker container designed for ML workloads with persistent filesystem.
+### Python ML Backend Deployment (HuggingFace Spaces)
+1. Create a new Space at [HuggingFace Spaces](https://huggingface.co/spaces).
+2. Select **Docker** SDK.
+3. Configure repository secrets: `GROQ_API_KEY`, `JWT_SECRET`, `NODE_BACKEND_URL`.
+4. Connect repository with root set to `backend-ml`.
 
 ---
 
 ## Environment Variables
 
-### Node Backend (`backend/.env`)
-
+### Node.js Gateway (`backend/.env`)
 | Variable | Required | Description |
 |---|---|---|
-| `MONGO_URI` | ✅ | MongoDB Atlas connection string |
-| `JWT_SECRET` | ✅ | Shared secret for JWT signing (same in both backends) |
-| `GEMINI_API_KEY` | ✅ | Google Gemini API key (primary) |
-| `GEMINI_API_KEY_2` | ❌ | Backup Gemini key (failover) |
-| `RAZORPAY_KEY_ID` | ❌ | Razorpay payment key |
-| `RAZORPAY_KEY_SECRET` | ❌ | Razorpay payment secret |
-| `FRONTEND_URL` | ❌ | Deployed frontend URL (for CORS) |
-| `NODE_ENV` | ❌ | `production` to enable rate limiting + CORS enforcement |
-| `PORT` | ❌ | Default: `5000` |
+| `MONGO_URI` | ✅ Yes | MongoDB Atlas connection string |
+| `JWT_SECRET` | ✅ Yes | Secret key used to sign and verify JSON Web Tokens |
+| `ML_BACKEND_URL` | ❌ No | URL of Python ML service (default: `http://localhost:8000`) |
+| `GROQ_API_KEY` | ❌ No | Groq API key for open-source Llama 3.3 fallback code generation |
+| `GEMINI_API_KEY` | ❌ No | Primary Google Gemini API key |
+| `GEMINI_API_KEY_2` | ❌ No | Secondary failover Gemini API key |
+| `RAZORPAY_KEY_ID` | ❌ No | Razorpay test/production key ID |
+| `RAZORPAY_KEY_SECRET` | ❌ No | Razorpay secret key |
+| `PORT` | ❌ No | Server port (default: `5000`) |
+| `NODE_ENV` | ❌ No | `development` or `production` |
 
-### ML Backend (`backend-ml/.env`)
-
+### Python ML Engine (`backend-ml/.env`)
 | Variable | Required | Description |
 |---|---|---|
-| `JWT_SECRET` | ✅ | Must match Node backend's JWT_SECRET |
-| `GEMINI_API_KEY` | ❌ | For AI insights generation |
-| `GROQ_API_KEY` | ❌ | Free cloud LLM (Llama 3.1 8B) |
-| `HF_API_TOKEN` | ❌ | HuggingFace Inference API token |
-| `USE_OLLAMA` | ❌ | `true` for local LLM, `false` for cloud (default: `false`) |
-| `NODE_BACKEND_URL` | ❌ | URL of the Node backend (for GridFS downloads) |
-| `FRONTEND_URL` | ❌ | Deployed frontend URL (for CORS) |
+| `JWT_SECRET` | ✅ Yes | Must match the Node.js backend's `JWT_SECRET` |
+| `GROQ_API_KEY` | ✅ Yes | Primary free cloud LLM (Groq LPU running Llama 3.3 70B & Llama 3.1 8B) |
+| `GEMINI_API_KEY` | ❌ No | Gemini API key for insights generation |
+| `GEMINI_API_KEY_2` | ❌ No | Secondary Gemini API key for image analysis |
+| `HF_API_TOKEN` | ❌ No | HuggingFace Inference API token fallback |
+| `USE_OLLAMA` | ❌ No | `true` for 100% offline local LLMs, `false` for cloud APIs (default: `false`) |
+| `NODE_BACKEND_URL` | ❌ No | Node.js backend endpoint for GridFS downloads (default: `http://localhost:5000`) |
+| `PORT` | ❌ No | FastAPI port (default: `8000`) |
+
+---
+
+## Security & Production Hardening
+
+* **Isolated Subprocess Sandboxing**: In-app generated code is tested with strict timeouts (15s) in ephemeral temporary directories, preventing runaway execution loops.
+* **Authentication Integrity**: Password hashing via `bcryptjs` with 10 salt rounds. Shared cryptographic secrets between Node and Python backends validate identity on every protected route.
+* **Payment Tamper Resistance**: All Razorpay transactions verify HMAC-SHA256 signatures server-side. User identity is derived strictly from the verified JWT payload, preventing Insecure Direct Object References (IDOR).
+* **GridFS Stream Security**: Uploaded datasets are verified for MIME integrity and stored directly in MongoDB GridFS, preventing unauthorized filesystem read/writes on host servers.
+* **Strict CORS Governance**: Configured origin allowlists prevent unauthorized cross-origin requests in production.
 
 ---
 
 <p align="center">
-  <sub>Built for placement interview readiness — every component is designed to be explainable end-to-end.</sub>
+  <sub>AutoModel — Built for end-to-end automated machine learning, self-healing pipeline reliability, and interview-ready architectural excellence.</sub>
 </p>

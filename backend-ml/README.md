@@ -11,47 +11,68 @@ app_port: 7860
 
 # AutoModel ML Backend
 
-FastAPI-powered ML pipeline backend for the AutoModel platform.
+FastAPI-powered ML pipeline backend and execution sandbox for the AutoModel platform.
 
 ## Features
 
-- 📊 Automated dataset analysis & EDA
-- 🤖 Multi-model training (scikit-learn)
-- 🧠 Gemini-powered AI insights
-- 🖼️ Gemini multimodal visualization analysis
-- 💬 RAG chatbot with ChromaDB memory
-- 🔧 Gemini auto-healer for data errors
+- 📊 **Automated Dataset Analysis & EDA**: Statistical profiling, data quality auditing, and 5 automated visualization plots.
+- 🤖 **Multi-Model Benchmark Competition**: Simultaneously trains and evaluates scikit-learn, XGBoost, and LightGBM models.
+- 🎯 **Optuna Hyperparameter Optimization**: Bayesian HPO with 3-fold cross-validation.
+- 🧪 **In-App Sandbox Execution**: Isolated test execution of generated Python code against sample datasets.
+- 🔄 **Self-Healing Code Generator**: Auto-detects runtime execution errors and re-prompts open-source LLMs to fix tracebacks.
+- 🧠 **AI Insights**: Natural-language business summaries and dataset diagnostics.
+- 💬 **RAG Chatbot**: Vector memory in ChromaDB with `sentence-transformers` embeddings and zero-API offline fallback.
+- 🔧 **Auto-Healer**: LLM-driven dataset repair for unexpected training pipeline crashes.
 
-## LLM Architecture (Cloud Mode)
+## LLM Architecture & Cascade
 
-| Route | Provider | Model | Notes |
+| Route | Provider Cascade | Model(s) | Notes |
 |---|---|---|---|
-| RAG Chatbot | **Groq** → HuggingFace → Static | `gemma2-9b-it` | Open-source, 15k TPM free |
-| AI Insights | **Groq** → HuggingFace → Static | `gemma2-9b-it` | Same cascade |
-| Viz Analysis | **Gemini Flash** | `gemini-1.5-flash` | Only option for image input |
-| Auto-Healer | **Gemini Flash** | `gemini-1.5-flash` | Error recovery only |
+| **Code Generation & Verification** | **Groq** → **Ollama** → Gemini Flash → Static | `llama-3.3-70b-versatile` / `llama-3.1-8b-instant` / `qwen2.5-coder:7b` | Open-source, 100% free tier, zero Gemini token burn |
+| **Auto-Healer (Data Errors)** | **Ollama** → **Groq** → HuggingFace → Static | `gemma2:9b` / `llama-3.1-8b-instant` / `mistral-7b` | Sandbox `exec()` with safe builtins |
+| **RAG Chatbot** | **Gemini Flash** → **Groq** → HuggingFace → Offline | `gemini-1.5-flash` / `llama-3.1-8b` / Offline Rule Engine | ChromaDB vector search + memory |
+| **AI Insights** | **Gemini Flash** → **Groq** → Static | `gemini-1.5-flash` / `llama-3.3-70b` | Post-training assessment |
+| **Target Detection** | **Groq** → **Ollama** → Heuristics | `llama-3.1-8b-instant` | Disambiguates complex columns |
+
+## API Routes
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/analyze` | Cleans data, profiles quality, creates EDA plots, suggests target |
+| `POST` | `/confirm-target` | Competes 5 ML models, runs Optuna HPO, calculates feature importance |
+| `POST` | `/generate-verified-code` | Runs Python script in subprocess sandbox, auto-heals errors with Groq |
+| `POST` | `/generate-insights` | Generates summary takeaways and model assessments |
+| `POST` | `/chat` | Queries RAG vector memory with conversational response |
+| `GET` | `/sample-data` | Returns first 10 rows for auto-healer and code generation |
+| `GET` | `/outputs/:filename` | Serves static EDA plot image files |
 
 ## Environment Variables
 
-Set these in your HuggingFace Space Settings → Repository secrets:
-
 | Variable | Required | Description |
 |---|---|---|
-| `GROQ_API_KEY` | ✅ Yes | Groq API key — primary LLM (RAG chat + insights) |
-| `GEMINI_API_KEY_2` | ✅ Yes | Gemini key — vision route + auto-healer only |
-| `HF_API_TOKEN` | ✅ Yes | HuggingFace token — fallback if Groq rate-limits |
-| `JWT_SECRET` | ✅ Yes | Must match Node.js backend JWT secret |
-| `USE_OLLAMA` | ❌ Always `false` | Never true on cloud |
+| `JWT_SECRET` | ✅ Yes | Shared secret matching Node.js backend JWT secret |
+| `GROQ_API_KEY` | ✅ Yes | Groq API key — powers open-source Llama 3.3 code generator & auto-healer |
+| `GEMINI_API_KEY` | ❌ Optional | Google Gemini key for insights generation |
+| `GEMINI_API_KEY_2` | ❌ Optional | Secondary Gemini key for visual image analysis |
+| `HF_API_TOKEN` | ❌ Optional | HuggingFace token — fallback if Groq rate-limits |
+| `USE_OLLAMA` | ❌ Optional | `true` for 100% offline local LLMs, `false` for cloud APIs |
+| `NODE_BACKEND_URL` | ❌ Optional | Node.js backend URL (default: `http://localhost:5000`) |
 
 ## Local Development
 
 ```bash
 cd backend-ml
 python -m venv venv
-venv\Scripts\activate  # Windows
+
+# Windows:
+.\venv\Scripts\Activate.ps1
+# macOS/Linux:
+source venv/bin/activate
+
 pip install -r requirements.txt
-pip install ollama  # Optional: only if you want local Ollama
 cp .env.example .env
-# Edit .env with your values
-uvicorn ml_services.app:app --reload --port 8000
+# Edit .env with your GROQ_API_KEY and JWT_SECRET
+
+# Run FastAPI server:
+python -m uvicorn ml_services.app:app --reload --port 8000
 ```
